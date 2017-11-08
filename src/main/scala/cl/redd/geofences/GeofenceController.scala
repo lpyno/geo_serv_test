@@ -1,9 +1,12 @@
 package cl.redd.geofences
 
 import akka.actor.ActorSystem
+import akka.http.javadsl.model.HttpMethods
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.Multipart.FormData
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.http.scaladsl.marshalling.Marshal
 import akka.stream.ActorMaterializer
 import cl.redd.objects.{FilterPaginateSort, Geofence}
 import cl.redd.discovery.ReddDiscoveryClient
@@ -52,8 +55,11 @@ class GeofenceController ( implicit val actor:ActorSystem, implicit val actorMat
   def saveGeofence( geofence:Geofence ) : Future[Geofence] = {
 
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
-    val url = s"$serviceHost/geofence/save?geofence=$geofence"
-    val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( uri = url ) )
+    val reqEntity = Marshal( geofence ).to[RequestEntity]
+    val url = s"$serviceHost/geofence/save"
+    val future:Future[HttpResponse] =
+      Http().singleRequest( HttpRequest( method = HttpMethod.custom( "POST" ) , uri = url , entity = reqEntity ) )
+
     future.flatMap {
       case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[Geofence]
     }
