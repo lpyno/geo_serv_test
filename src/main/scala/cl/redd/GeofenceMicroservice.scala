@@ -21,10 +21,13 @@ object GeofenceMicroservice extends App with RouteConcatenation {
 
   ReddDiscoveryClient.init()
 
-  val geofence = system.actorOf( Props[GeofenceActor] )
+  //val geofence = system.actorOf( Props[GeofenceActor] )
   val routes =
     cors() (
       new GeofenceService().route ~
-      SwaggerDocService.routes )
-      Http().bindAndHandle(routes, "0.0.0.0", 12345)
+      SwaggerDocService.routes
+    )
+
+  Http().bindAndHandle(routes, "0.0.0.0", 12345)
+
 }

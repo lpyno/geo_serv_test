@@ -1,6 +1,6 @@
 package cl.redd.geofences
 
-import akka.actor.{Actor, ActorLogging, ActorSystem}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, StatusCodes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
@@ -18,19 +18,22 @@ class GeofenceController ( implicit val actor:ActorSystem, implicit val actorMat
 
   /** 3.1 "/save", POST method */
 
-  def save( realm:Option[String] = None , geofence:Option[Geofence] = None ) : Geofence = {
+  //def save( realm:Option[String] = None , geofence:Option[Geofence] = None ) : Geofence = {
+  def save(  geofence:Option[Geofence] = None ) : Geofence = {
 
     val rv:Geofence =
-      if( realm.isEmpty || geofence.isEmpty ) {
+      //if( realm.isEmpty || geofence.isEmpty ) {
+      if( !geofence.isEmpty ) {
 
         val resp = Try[Geofence] {
-          val futureSave = saveGeofence( realm.get , geofence.get )
+          //val futureSave = saveGeofence( realm.get , geofence.get )
+          val futureSave = saveGeofence( geofence.get )
           val saveRv = Await.result( futureSave , Duration( 10 , "sec" ) )
           saveRv // resp = saveRv
         }
 
         val opResult:Geofence = resp match {
-          case Success( v ) => v
+          case Success( v ) => println( "Save OK!" ); v
           case Failure( e ) => println( "Save failed!: " , e.getMessage ); new Geofence
         }
 
@@ -45,7 +48,8 @@ class GeofenceController ( implicit val actor:ActorSystem, implicit val actorMat
     rv //
   }
 
-  def saveGeofence( realm:String , geofence:Geofence ) : Future[Geofence] = {
+  //def saveGeofence( realm:String , geofence:Geofence ) : Future[Geofence] = {
+  def saveGeofence( geofence:Geofence ) : Future[Geofence] = {
 
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
     val url = s"$serviceHost/geofence/save?geofence=$geofence"

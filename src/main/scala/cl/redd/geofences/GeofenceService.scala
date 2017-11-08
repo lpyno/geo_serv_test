@@ -3,6 +3,7 @@ package cl.redd.geofences
 import javax.ws.rs.Path
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.server.Directives
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
@@ -17,7 +18,7 @@ import scala.concurrent.duration._
 
 
 @Api(value = "/geofences", produces = "application/json")
-@Path("/geofences")
+@Path("/")
 class GeofenceService( implicit val actor:ActorSystem, implicit val actorMaterializer: ActorMaterializer, implicit val ec:ExecutionContext )
   extends Directives {
 
@@ -36,14 +37,14 @@ class GeofenceService( implicit val actor:ActorSystem, implicit val actorMateria
   /** 3.1 "/save", POST method */
   @Api( value = "/save", produces = "application/json")
   @Path("/save")
-  @ApiOperation(value = "Crea Geocerca", nickname = "saveGeofence", httpMethod = "POST", response = classOf[SaveResponse])
+  @ApiOperation(value = "Crea Geocerca", nickname = "saveGeofence", httpMethod = "POST", response = classOf[Geofence])
   @ApiImplicitParams(
     Array(
-      new ApiImplicitParam( name  = "realm",
+      /*new ApiImplicitParam( name  = "realm",
                             value = "dominio donde se creará la nueva geocerca",
                             required = true,
                             dataTypeClass = classOf[String],
-                            paramType = "body" ),
+                            paramType = "body" ),*/
 
       new ApiImplicitParam( name  = "geofence",
                             value = "nueva geocerca",
@@ -58,9 +59,10 @@ class GeofenceService( implicit val actor:ActorSystem, implicit val actorMateria
   def save =
     path("save") {
       post {
-        entity(as[SaveRequest]) {
+        entity(as[Geofence]) {
           println( "testing debug messages..." )
-          request => complete { geofenceController.save( Some( request.realm ) , Some( request.geofence ) ) }
+          //request => complete { geofenceController.save( Some( request.realm ) , Some( request.geofence ) ) }
+          request => complete { geofenceController.save( Some( request ) ) }
 
         }
       }
@@ -76,17 +78,17 @@ class GeofenceService( implicit val actor:ActorSystem, implicit val actorMateria
                             value = "dominio a consultar",
                             required = true,
                             dataTypeClass = classOf[String],
-                            paramType = "body" ),
+                            paramType = "query" ),
       new ApiImplicitParam( name = "geofenceIds",
                             value = "lista de identificadores requeridos ( >= 1 ) ",
                             required = true,
                             dataTypeClass = classOf[List[Int]],
-                            paramType = "body" ),
+                            paramType = "query" ),
       new ApiImplicitParam( name = "fps",
                             value = "información para filtro, paginado y ordenamiento",
                             required = true,
                             dataTypeClass = classOf[FilterPaginateSort],
-                            paramType = "body" )
+                            paramType = "query" )
     )
   )
   @ApiResponses(Array(
