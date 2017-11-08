@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="SBT: com.netflix.netflix-commons:netflix-statistics:0.1.1:jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/com.netflix.netflix-commons/netflix-statistics/jars/netflix-statistics-0.1.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/com.netflix.netflix-commons/netflix-statistics/srcs/netflix-statistics-0.1.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

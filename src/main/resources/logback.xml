@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="syslog" class="ch.qos.logback.classic.net.SyslogAppender">
+        <Facility>${TSLOCAL}</Facility>
+        <SyslogHost>127.0.0.1</SyslogHost>
+        <SuffixPattern>${TSNAME} ${TSVERSION} %-5p [%-20.20t] %-30.30C{1} %m%n</SuffixPattern>
+    </appender>
+    <logger name="cl" level="INFO"/>
+    <root level="INFO">
+        <appender-ref ref="syslog"/>
+    </root>
+</configuration>
+<!--<configuration>
+<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <layout class="ch.qos.logback.classic.PatternLayout">
+        <Pattern>
+            %d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+        </Pattern>
+    </layout>
+</appender>
+
+<logger name="org.mongodb.driver" level="OFF"/>
+<logger name="reactivemongo.api" level="OFF"/>
+
+
+<root level="info">
+    <appender-ref ref="STDOUT" />
+</root>
+</configuration>-->
