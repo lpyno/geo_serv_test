@@ -21,4 +21,4 @@ case class Geofence (
   geoCoordinatesGeom	  : Option[Vector[String]] = None,
   geoCoordinatesBboxGeom: Option[Vector[String]] = None
 
-                    )
+)

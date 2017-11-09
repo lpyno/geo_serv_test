@@ -6,6 +6,7 @@ import spray.json._
 
 object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
 
+  // Geofences
   // FilterPaginateSort
   implicit val fpsFormat = jsonFormat5( FilterPaginateSort )
   // Geofence
@@ -31,5 +32,16 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   // delete
   implicit val deleteReqFormat  = jsonFormat2 ( DeleteReq )
   implicit val deleteRespFormat = jsonFormat1 ( DeleteResp )
+
+  // Auth
+  // User Info
+  //implicit val userInfoFormat = jsonFormat4( UserInfo )
+  // login
+  case class AuthLoginReq( realm:Option[String] , user:Option[String] , pass:Option[String] , device:Option[String] )
+  //case class AuthLoginReq( realm:String , user:String , pass:String , device:String )
+  implicit val authLoginReqFormat = jsonFormat4( AuthLoginReq )
+  // validate
+  case class AuthValidateReq( realm:Option[String] , token:Option[String] , device:Option[String] )
+  implicit val authValidateReq = jsonFormat3( AuthValidateReq )
 
 }

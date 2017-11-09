@@ -283,6 +283,8 @@ class GeofenceService( implicit val actor:ActorSystem, implicit val actorMateria
 
   }*/
 
+
+
 }
 
 

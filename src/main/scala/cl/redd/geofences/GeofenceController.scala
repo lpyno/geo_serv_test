@@ -16,20 +16,19 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 import cl.redd.objects.ReddJsonProtocol._
+import spray.json.pimpAny
 
 class GeofenceController ( implicit val actor:ActorSystem, implicit val actorMaterializer: ActorMaterializer, implicit val ec:ExecutionContext ) {
 
   /** 3.1 "/save", POST method */
 
-  //def save( realm:Option[String] = None , geofence:Option[Geofence] = None ) : Geofence = {
-  def save(  geofence:Option[Geofence] = None ) : Geofence = {
+  def save( geofence:Option[Geofence] = None ) : Geofence = {
 
     val rv:Geofence =
-      //if( realm.isEmpty || geofence.isEmpty ) {
-      if( !geofence.isEmpty ) {
+
+      if( geofence.nonEmpty ) {
 
         val resp = Try[Geofence] {
-          //val futureSave = saveGeofence( realm.get , geofence.get )
           val futureSave = saveGeofence( geofence.get )
           val saveRv = Await.result( futureSave , Duration( 10 , "sec" ) )
           saveRv // resp = saveRv
@@ -48,17 +47,22 @@ class GeofenceController ( implicit val actor:ActorSystem, implicit val actorMat
         new Geofence
 
       }
+
     rv //
+
   }
 
-  //def saveGeofence( realm:String , geofence:Geofence ) : Future[Geofence] = {
-  def saveGeofence( geofence:Geofence ) : Future[Geofence] = {
+
+
+  private def saveGeofence( geofence:Geofence ) : Future[Geofence] = {
 
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
-    val reqEntity = Marshal( geofence ).to[RequestEntity]
+
     val url = s"$serviceHost/geofence/save"
-    val future:Future[HttpResponse] =
-      Http().singleRequest( HttpRequest( method = HttpMethod.custom( "POST" ) , uri = url , entity = reqEntity ) )
+
+    val entity = HttpEntity(MediaTypes.`application/json`, geofence.toJson.toString())
+
+    val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( method = HttpMethod.custom( "POST" ) , uri = url , entity = entity ) )
 
     future.flatMap {
       case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[Geofence]
