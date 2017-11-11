@@ -16,50 +16,47 @@ import scala.util.{Failure, Success, Try}
 
 class AuthenticationController( implicit val actor:ActorSystem, implicit val materializer: ActorMaterializer, implicit val ec:ExecutionContext ) {
 
-  def login(realm:Option[String] = None, user:Option[String] = None, pass:Option[String] = None, device:Option[String] = None ) : ValidateOld = {
+  def login(realm:Option[String] = None, user:Option[String] = None, pass:Option[String] = None, device:Option[String] = None ) : UserInfo = {
 
     println( "in 'login' ..." )
 
-    //val rv:UserInfo =
-    val rv:ValidateOld =
+    val rv:UserInfo =
 
-    if( realm.nonEmpty && user.nonEmpty && pass.nonEmpty && device.nonEmpty ) {
+      if( realm.nonEmpty && user.nonEmpty && pass.nonEmpty && device.nonEmpty ) {
 
-      val rvLogin = Try[UserOld] {
-        val future = authLogin( realm.get , user.get , pass.get , device.get )
-        val rv = Await.result( future , Duration( 10 , "sec" ) )
-        rv // rvLogin = saveRv
+        val rvLogin = Try[UserOld] {
+          val future = authLogin( realm.get , user.get , pass.get , device.get )
+          val rv = Await.result( future , Duration( 10 , "sec" ) )
+          rv // rvLogin = saveRv
+        }
+
+        val userOld:UserOld = rvLogin match {
+          case Success( userOld ) => println( "Login OK!" ); userOld
+          case Failure( err ) => println( "Login failed!... " , err.getMessage ); new UserOld
+        }
+
+        println( userOld )
+
+        val rvValidate = Try[ValidateOld] {
+          val future = validate( realm , userOld.token , device )
+          val rv = Await.result( future , Duration( 10 , "sec" ) )
+          rv // validateOld = validateRv
+        }
+
+        val validateOld:ValidateOld = rvValidate match {
+          case Success( v ) => println( "Validate OK!" ); v
+          case Failure( e ) => println( "Validation failed!... " , e.getMessage ); new ValidateOld
+        }
+
+        println( validateOld )
+        constructUserInfo( userOld , validateOld )
+
+      } else {
+
+        println( "Empty parameter!..." )
+        new UserInfo //
+
       }
-
-      val userOld:UserOld = rvLogin match {
-        case Success( userOld ) => println( "Login OK!" ); userOld
-        case Failure( err ) => println( "Login failed!... " , err.getMessage ); new UserOld
-      }
-
-      println( userOld )
-      //userOld // rv = userOld
-
-      val rvValidate = Try[ValidateOld] {
-        val future = validate( realm , userOld.token , device )
-        val rv = Await.result( future , Duration( 10 , "sec" ) )
-        rv // validateOld = validateRv
-      }
-
-      val validateOld:ValidateOld = rvValidate match {
-        case Success( v ) => println( "Validate OK!" ); v
-        case Failure( e ) => println( "Validation failed!... " , e.getMessage ); new ValidateOld
-      }
-
-      println( validateOld )
-      //constructUserInfo( userOld , validateOld )
-      validateOld
-
-    } else {
-
-      println( "Empty parameter!..." )
-      //new UserInfo //
-      new ValidateOld
-    }
 
     rv
 
@@ -98,6 +95,7 @@ class AuthenticationController( implicit val actor:ActorSystem, implicit val mat
   }
 
   def constructUserInfo( userOld:UserOld , validateOld:ValidateOld ): UserInfo = {
+  //def constructUserInfo( userOld:UserOld , validateOld:ValidateOld ): Unit = {
 
     val listPreferences:List[UserPrefOld] = validateOld.metadataUser.get.preferences.get
 
@@ -119,6 +117,7 @@ class AuthenticationController( implicit val actor:ActorSystem, implicit val mat
 
     )
 
+    println( userInfo )
     userInfo
 
   }
