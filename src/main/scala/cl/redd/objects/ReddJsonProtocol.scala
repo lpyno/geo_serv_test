@@ -34,14 +34,20 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   implicit val deleteRespFormat = jsonFormat1 ( DeleteResp )
 
   // Auth
+  // User Old
+  implicit val userOldFormat = jsonFormat5( UserOld )
   // User Info
-  //implicit val userInfoFormat = jsonFormat4( UserInfo )
+  implicit val userInfoFormat = jsonFormat13( UserInfo )
   // login
-  case class AuthLoginReq( realm:Option[String] , user:Option[String] , pass:Option[String] , device:Option[String] )
-  //case class AuthLoginReq( realm:String , user:String , pass:String , device:String )
   implicit val authLoginReqFormat = jsonFormat4( AuthLoginReq )
   // validate
-  case class AuthValidateReq( realm:Option[String] , token:Option[String] , device:Option[String] )
-  implicit val authValidateReq = jsonFormat3( AuthValidateReq )
+  // UserPrefOld
+  implicit val userPrefOldFormat = jsonFormat5( UserPrefOld )
+  // MetadataUserOld
+  implicit val metadataUserOldFormat = jsonFormat15( MetadataUserOld )
+//  implicit val metadataUserOldFormat = jsonFormat13( MetadataUserOld )
+  // ValidateOld
+//  implicit val validateOldFormat = jsonFormat5( ValidateOld )
+  implicit val validateOldFormat = jsonFormat6( ValidateOld )
 
 }

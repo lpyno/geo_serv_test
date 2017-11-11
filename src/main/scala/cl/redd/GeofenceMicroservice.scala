@@ -1,10 +1,11 @@
 package cl.redd
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.RouteConcatenation
 import akka.stream.ActorMaterializer
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
+import cl.redd.auth.AuthenticationService
 import cl.redd.geofences._
 import cl.redd.swagger.SwaggerDocService
 import cl.redd.discovery.ReddDiscoveryClient
@@ -21,10 +22,10 @@ object GeofenceMicroservice extends App with RouteConcatenation {
 
   ReddDiscoveryClient.init()
 
-  //val geofence = system.actorOf( Props[GeofenceActor] )
   val routes =
     cors() (
       new GeofenceService().route ~
+      new AuthenticationService().route ~
       SwaggerDocService.routes
     )
 

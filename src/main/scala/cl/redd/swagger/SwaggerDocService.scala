@@ -1,5 +1,6 @@
 package cl.redd.swagger
 
+import cl.redd.auth.AuthenticationService
 import com.github.swagger.akka.SwaggerHttpService
 import com.github.swagger.akka.model.Info
 import cl.redd.geofences.GeofenceService
@@ -8,9 +9,9 @@ import io.swagger.models.auth.BasicAuthDefinition
 
 object SwaggerDocService extends SwaggerHttpService {
 
-  override val apiClasses = Set( classOf[GeofenceService] )
+  override val apiClasses = Set( classOf[GeofenceService] , classOf[AuthenticationService] )
   override val info = Info( version = "0.0.1",
-                            title = "Geofences Service" )
+                            title = "Auth - Geofences Service" )
   override val host = "localhost:12345"
   override val basePath = "/"
   override val externalDocs = Some(new ExternalDocs("Core Docs", "http://acme.com/docs"))

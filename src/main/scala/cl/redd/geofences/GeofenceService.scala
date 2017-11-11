@@ -2,10 +2,8 @@ package cl.redd.geofences
 
 import javax.ws.rs.Path
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives
-import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import cl.redd.geofences.GeofenceActor._
@@ -61,7 +59,6 @@ class GeofenceService( implicit val actor:ActorSystem, implicit val actorMateria
       post {
         entity(as[Geofence]) {
           println( "testing debug messages..." )
-          //request => complete { geofenceController.save( Some( request.realm ) , Some( request.geofence ) ) }
           request => complete { geofenceController.save( Some( request ) ) }
 
         }

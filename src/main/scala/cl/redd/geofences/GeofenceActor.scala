@@ -26,6 +26,7 @@ object GeofenceActor {
   /** delete */
   case class DeleteReq ( realm:String , geofenceId:Int )
   case class DeleteResp( geofence:Geofence )
+  /** login */
 
 }
 

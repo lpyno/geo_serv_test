@@ -61,18 +61,21 @@ class AuthenticationService(implicit val actor:ActorSystem, implicit val actorMa
   def login =
     path("login") {
       get {
-        entity( as[AuthLoginReq] ){
-          println( "testing auth debug messages..." )
-          request => complete { authController.login( request.realm , request.user , request.pass , request.device ) }
-
+        parameters( 'realm.as[Option[String]] , 'user.as[Option[String]] , 'password.as[Option[String]] , 'device.as[Option[String]] ) { ( realm , user , password , device ) =>
+          //        entity( as[AuthLoginReq] ){
+          println("testing auth debug messages...")
+          complete {
+            authController.login( realm, user , password , device )
+          }
         }
+//        }
       }
     }
 
-  /** 3.2 "/getById", GET method */
-  @Api(value = "/getById", produces = "application/json")
-  @Path("/getById")
-  @ApiOperation(value = "Solicita geocercas por ID", nickname = "getById", httpMethod = "GET", response = classOf[GetByIdResp])
+  /** 1.2 "/validate", GET method */
+  @Api(value = "/validate", produces = "application/json")
+  @Path("/validate")
+  @ApiOperation(value = "Valida acciones de usuario", nickname = "authValidate", httpMethod = "GET", response = classOf[UserInfo])
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam( name = "realm",
@@ -95,8 +98,8 @@ class AuthenticationService(implicit val actor:ActorSystem, implicit val actorMa
   @ApiResponses(Array(
     new ApiResponse(code = 500, message = "Internal server error")
   ))
-  def getById =
-    path("getById") {
+  def validateOp =
+    path("validate") {
       post {
         entity(as[GetByIdReq]) { request =>
           complete { "getById method" }
