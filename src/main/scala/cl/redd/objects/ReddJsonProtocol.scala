@@ -32,22 +32,33 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   // delete
   implicit val deleteReqFormat  = jsonFormat2 ( DeleteReq )
   implicit val deleteRespFormat = jsonFormat1 ( DeleteResp )
-
-  // Auth
+  // ChildOld
+//  implicit val childOldFormat      = jsonFormat8( ChildOld )
+  // FunctionalityOld
+  implicit val functionalityOldFormat = jsonFormat5( FunctionalityOld )
+  // ProfileOld
+  implicit val profileOldFormat       = jsonFormat4( ProfileOld )
   // User Old
-  implicit val userOldFormat = jsonFormat5( UserOld )
+  implicit val userOldFormat      = jsonFormat5( UserOld )
   // User Info
-  implicit val userInfoFormat = jsonFormat13( UserInfo )
+  implicit val userInfoFormat     = jsonFormat13( UserInfo )
   // login
   implicit val authLoginReqFormat = jsonFormat4( AuthLoginReq )
-  // validate
   // UserPrefOld
-  implicit val userPrefOldFormat = jsonFormat5( UserPrefOld )
+  implicit val userPrefOldFormat      = jsonFormat5( UserPrefOld )
   // MetadataUserOld
-  implicit val metadataUserOldFormat = jsonFormat15( MetadataUserOld )
-//  implicit val metadataUserOldFormat = jsonFormat13( MetadataUserOld )
+  implicit val metadataUserOldFormat  = jsonFormat16( MetadataUserOld )
   // ValidateOld
-//  implicit val validateOldFormat = jsonFormat5( ValidateOld )
-  implicit val validateOldFormat = jsonFormat6( ValidateOld )
+  implicit val validateOldFormat      = jsonFormat6( ValidateOld )
+
+  implicit val authProfContentFormat = jsonFormat1( AuthProfContent )
+
+  implicit val authProfSubChildFormat = jsonFormat8( AuthProfSubChild )
+
+  implicit val authProfChildFormat = jsonFormat8( AuthProfChild )
+
+  implicit val authProfileOldFormat = jsonFormat10( AuthProfileOld )
+  // SelectProfile
+  implicit val selectProfileFormat    = jsonFormat2( SelectProfiles )
 
 }

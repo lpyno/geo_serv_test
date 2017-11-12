@@ -62,13 +62,10 @@ class AuthenticationService(implicit val actor:ActorSystem, implicit val actorMa
     path("login") {
       get {
         parameters( 'realm.as[Option[String]] , 'user.as[Option[String]] , 'password.as[Option[String]] , 'device.as[Option[String]] ) { ( realm , user , password , device ) =>
-          //        entity( as[AuthLoginReq] ){
-          println("testing auth debug messages...")
           complete {
             authController.login( realm, user , password , device )
           }
         }
-//        }
       }
     }
 

@@ -4,12 +4,13 @@ import cl.redd.auth.AuthenticationService
 import com.github.swagger.akka.SwaggerHttpService
 import com.github.swagger.akka.model.Info
 import cl.redd.geofences.GeofenceService
+import cl.redd.vehicles.VehiclesService
 import io.swagger.models.ExternalDocs
 import io.swagger.models.auth.BasicAuthDefinition
 
 object SwaggerDocService extends SwaggerHttpService {
 
-  override val apiClasses = Set( classOf[GeofenceService] , classOf[AuthenticationService] )
+  override val apiClasses = Set( classOf[GeofenceService] , classOf[AuthenticationService] , classOf[VehiclesService] )
   override val info = Info( version = "0.0.1",
                             title = "Auth - Geofences Service" )
   override val host = "localhost:12345"

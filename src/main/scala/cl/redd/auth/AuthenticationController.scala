@@ -7,8 +7,9 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import cl.redd.discovery.ReddDiscoveryClient
 import cl.redd.objects.ReddJsonProtocol._
-import cl.redd.objects.{UserInfo, UserOld, UserPrefOld, ValidateOld}
+import cl.redd.objects._
 import cl.tastets.life.objects.ServicesEnum
+import spray.json.{JsFalse, JsTrue}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -37,19 +38,33 @@ class AuthenticationController( implicit val actor:ActorSystem, implicit val mat
 
         println( userOld )
 
-        val rvValidate = Try[ValidateOld] {
-          val future = validate( realm , userOld.token , device )
+        val rvMetadataUser = Try[MetadataUserOld] {
+          val future = getUserMetadata( realm , userOld.userId )
           val rv = Await.result( future , Duration( 10 , "sec" ) )
           rv // validateOld = validateRv
         }
 
-        val validateOld:ValidateOld = rvValidate match {
-          case Success( v ) => println( "Validate OK!" ); v
-          case Failure( e ) => println( "Validation failed!... " , e.getMessage ); new ValidateOld
+        val metadataOld:MetadataUserOld = rvMetadataUser match {
+          case Success( metadata ) => println( "Metadata get OK!" ); metadata
+          case Failure( err ) => println( "Metadata get failed!... " , err.getMessage ); new MetadataUserOld
         }
 
-        println( validateOld )
-        constructUserInfo( userOld , validateOld )
+        println( metadataOld )
+
+        val rvSelectProfiles = Try[SelectProfiles] {
+          val future = selectProfiles( realm , device , userOld.username )
+          val rv = Await.result( future , Duration( 10 , "sec" ) )
+          rv // validateOld = validateRv
+        }
+
+        val authProfiles:SelectProfiles = rvSelectProfiles match {
+          case Success( profiles ) => println( "Profiles get OK!" ); profiles
+          case Failure( err ) => println( "Profiles get failed!... " , err.getMessage ); new SelectProfiles
+        }
+
+        println( authProfiles )
+
+        constructUserInfo( userOld , metadataOld , authProfiles )
 
       } else {
 
@@ -94,23 +109,25 @@ class AuthenticationController( implicit val actor:ActorSystem, implicit val mat
 
   }
 
-  def constructUserInfo( userOld:UserOld , validateOld:ValidateOld ): UserInfo = {
-  //def constructUserInfo( userOld:UserOld , validateOld:ValidateOld ): Unit = {
+  def constructUserInfo( userOld:UserOld , metadataOld:MetadataUserOld , authProfiles:SelectProfiles ): UserInfo = {
 
-    val listPreferences:List[UserPrefOld] = validateOld.metadataUser.get.preferences.get
+    val isAdmin:Option[Boolean] = if ( authProfiles.profiles.get.head.childs.get.head.state.get.equalsIgnoreCase( "configuration.isAdmin" ) )
+                                    Some(true)
+                                  else
+                                    Some(false)
 
     val userInfo:UserInfo = new UserInfo (
 
       id          = userOld.userId,
-      name        = validateOld.metadataUser.get.name.orElse( None ),
-      companyId   = userOld.companyId,
-      isAdmin     = None, // isAdmin TODO
-      profiles    = None, // profiles TODO
-      realm       = validateOld.metadataUser.get.realm,
+      name        = metadataOld.userName,
+      companyId   = metadataOld.companyId,
+      isAdmin     = isAdmin,
+      profiles    = metadataOld.profiles,
+      realm       = metadataOld.realm,
       status      = userOld.status,
-      token       = validateOld.token,
-      email       = validateOld.metadataUser.get.email,
-      timeZone    = listPreferences.head.value,
+      token       = userOld.token,
+      email       = metadataOld.email,
+      timeZone    = metadataOld.preferences.get.head.value,
       savedViews  = None,
       dashboard   = None,
       extraFields = None
@@ -119,6 +136,40 @@ class AuthenticationController( implicit val actor:ActorSystem, implicit val mat
 
     println( userInfo )
     userInfo
+
+  }
+
+  def selectProfiles(realm: Option[String], device: Option[String] , user:Option[String]):Future[SelectProfiles] = {
+
+    println( "in 'select profile' ..." )
+
+    val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.AUTH.toString() )
+
+    val url = s"$serviceHost/auth/authorization/selectProfiles?realm=${realm.get}&device=${device.get}&user=${user.get}"
+
+    val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( method = HttpMethod.custom( "GET" ) , uri = url ) )
+
+    future.flatMap {
+      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[SelectProfiles]
+    }
+
+  }
+
+  // http://192.168.173.166:42200/metadata/user/getById?realm=rslite&id=397
+
+  def getUserMetadata( realm : Option[String] = None , userId : Option[Int] = None ) = {
+
+    println( "in 'getUserMetadata' ..." )
+
+    val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAUSER.toString() )
+
+    val url = s"$serviceHost/metadata/user/getById?realm=${realm.get}&id=${userId.get}"
+
+    val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( method = HttpMethod.custom( "GET" ) , uri = url ) )
+
+    future.flatMap {
+      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[MetadataUserOld]
+    }
 
   }
 

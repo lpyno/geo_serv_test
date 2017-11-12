@@ -6,7 +6,7 @@ case class UserInfo (
   name	     : Option[String] = None,
   companyId	 : Option[Int] = None,
   isAdmin	   : Option[Boolean] = None,
-  profiles	 : Option[List[String]] = None,			// definir si es necesario obtener todo el perfilado o solo para rastreosar (los true)
+  profiles	 : Option[List[ProfileOld]] = None,			// definir si es necesario obtener todo el perfilado o solo para rastreosar (los true)
   realm		   : Option[String] = None,
   status	   : Option[String] = None,
   token		   : Option[String] = None, 					    // se va a seguir ocupandp token?

@@ -6,6 +6,7 @@ case class MetadataUserOld (
   preferences : Option[List[UserPrefOld]] = None,
   logoPath    : Option[String] = None,
   tokenTime   : Option[Long]   = None,
+  profiles    : Option[List[ProfileOld]] = None,
   userName    : Option[String] = None,
   token       : Option[String] = None,
   rut         : Option[String] = None,
