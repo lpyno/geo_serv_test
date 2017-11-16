@@ -1,6 +1,6 @@
 package cl.redd.objects
 
-class LastState (
+case class LastState (
 
                 date		  : Option[Long] = None,
                 eventId	  : Option[Int] = None,

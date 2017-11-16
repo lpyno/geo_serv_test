@@ -9,6 +9,7 @@ import cl.redd.auth.AuthenticationService
 import cl.redd.geofences._
 import cl.redd.swagger.SwaggerDocService
 import cl.redd.discovery.ReddDiscoveryClient
+import cl.redd.vehicles.VehiclesService
 
 
 object GeofenceMicroservice extends App with RouteConcatenation {
@@ -26,6 +27,7 @@ object GeofenceMicroservice extends App with RouteConcatenation {
     cors() (
       new GeofenceService().route ~
       new AuthenticationService().route ~
+      new VehiclesService().route ~
       SwaggerDocService.routes
     )
 

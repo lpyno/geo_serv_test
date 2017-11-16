@@ -9,7 +9,6 @@ import cl.redd.discovery.ReddDiscoveryClient
 import cl.redd.objects.ReddJsonProtocol._
 import cl.redd.objects._
 import cl.tastets.life.objects.ServicesEnum
-import spray.json.{JsFalse, JsTrue}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -111,7 +110,16 @@ class AuthenticationController( implicit val actor:ActorSystem, implicit val mat
 
   def constructUserInfo( userOld:UserOld , metadataOld:MetadataUserOld , authProfiles:SelectProfiles ): UserInfo = {
 
-    val isAdmin:Option[Boolean] = if ( authProfiles.profiles.get.head.childs.get.head.state.get.equalsIgnoreCase( "configuration.isAdmin" ) )
+    val isAdmin:Option[Boolean] = if ( authProfiles.
+                                        profiles.
+                                          get.
+                                            head.
+                                              childs.
+                                                get.
+                                                  head.
+                                                    state.
+                                                      get.
+                                                        equalsIgnoreCase( "configuration.isAdmin" ) )
                                     Some(true)
                                   else
                                     Some(false)

@@ -1,7 +1,6 @@
 package cl.redd.auth
 
 import javax.ws.rs.Path
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer

@@ -37,19 +37,19 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   // FunctionalityOld
   implicit val functionalityOldFormat = jsonFormat5( FunctionalityOld )
   // ProfileOld
-  implicit val profileOldFormat       = jsonFormat4( ProfileOld )
+  implicit val profileOldFormat = jsonFormat4( ProfileOld )
   // User Old
-  implicit val userOldFormat      = jsonFormat5( UserOld )
+  implicit val userOldFormat = jsonFormat5( UserOld )
   // User Info
-  implicit val userInfoFormat     = jsonFormat13( UserInfo )
+  implicit val userInfoFormat = jsonFormat13( UserInfo )
   // login
   implicit val authLoginReqFormat = jsonFormat4( AuthLoginReq )
   // UserPrefOld
-  implicit val userPrefOldFormat      = jsonFormat5( UserPrefOld )
+  implicit val userPrefOldFormat = jsonFormat5( UserPrefOld )
   // MetadataUserOld
-  implicit val metadataUserOldFormat  = jsonFormat16( MetadataUserOld )
+  implicit val metadataUserOldFormat = jsonFormat16( MetadataUserOld )
   // ValidateOld
-  implicit val validateOldFormat      = jsonFormat6( ValidateOld )
+  implicit val validateOldFormat = jsonFormat6( ValidateOld )
 
   implicit val authProfContentFormat = jsonFormat1( AuthProfContent )
 
@@ -59,6 +59,17 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
 
   implicit val authProfileOldFormat = jsonFormat10( AuthProfileOld )
   // SelectProfile
-  implicit val selectProfileFormat    = jsonFormat2( SelectProfiles )
+  implicit val selectProfileFormat = jsonFormat2( SelectProfiles )
+
+  implicit val vehicleFirstBLockFormat = jsonFormat21( VehicleFirstBlock )
+  implicit val lastStateFormat = jsonFormat12( LastState )
+  implicit val vehicleLastBlockFormat  = jsonFormat3( VehicleLastBlock )
+  implicit val vehicleFormat = jsonFormat2( Vehicle )
+  implicit val lastStateOldFormat = jsonFormat15( LastStateOld )
+  implicit val vehicleOldFormat = jsonFormat19( VehicleOld )
+  implicit val getVehiclesByIdFormat = jsonFormat4( GetVehiclesById )
+  implicit val midFormatOldFormat = jsonFormat1( MidFormatOld )
+  implicit val getListByMidsFormat = jsonFormat3( GetListByMids )
+  //implicit val getListByMidsOldFormat = jsonFormat3( GetListByMidsOld )
 
 }
