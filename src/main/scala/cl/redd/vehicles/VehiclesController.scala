@@ -242,6 +242,10 @@ class VehiclesController(implicit val actor:ActorSystem, implicit val materializ
     val url = s"$serviceHost/metadata/vehicle/getByListMidsAsync"
     val hds= List(RawHeader("Accept", "application/json"))
     val body = HttpEntity( ContentTypes.`application/json`, params.get.toJson.toString() )
+    println( s"url ... $url" )
+    println( s"headers ... $hds" )
+    println( s"body ... $body" )
+
     val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
 
     future.flatMap {
