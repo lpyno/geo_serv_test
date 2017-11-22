@@ -6,7 +6,8 @@ case class GetFleetsByUserId (
                              userId       :Option[Int] = None ,
                              companyId    :Option[Int] = None ,
                              userProfile  :Option[String] = None,
-                             //withVehicles :Option[Boolean] = None,
+                             withVehicles :Option[Boolean] = None,
+                             withLastState:Option[Boolean] = None,
                              fps          :Option[FilterPaginateSort] = None
 
                              )

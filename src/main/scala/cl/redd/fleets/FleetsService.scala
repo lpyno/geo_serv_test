@@ -9,10 +9,10 @@ import akka.util.Timeout
 import cl.redd.objects._
 import cl.redd.objects.ReddJsonProtocol._
 import io.swagger.annotations._
-
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
+import spray.json._
 
 @Api(value = "/fleets", produces = "application/json")
 @Path("/")
@@ -35,7 +35,7 @@ class FleetsService( implicit val system:ActorSystem,
   /** 2.1 "/save", POST method */
   @Api(value = "/fleets/getByUser", produces = "application/json")
   @Path("/fleets/getByUser")
-  @ApiOperation(value = "getByUser", nickname = "getFleetsByUser", httpMethod = "POST", response = classOf[List[FleetOld]])
+  @ApiOperation(value = "getByUser", nickname = "getFleetsByUser", httpMethod = "POST", response = classOf[List[Fleet]])
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam( name  = "fleet",
@@ -46,6 +46,7 @@ class FleetsService( implicit val system:ActorSystem,
     )
   )
   @ApiResponses(Array(
+
     new ApiResponse(code = 500, message = "Internal server error")
   ))
   def getByUser =
@@ -53,10 +54,9 @@ class FleetsService( implicit val system:ActorSystem,
       path("getByUser") {
         post {
           entity(as[GetFleetsByUserId]) {
-            request => val fleets:Future[String] = fleetsController.getFleetsByUserId( Some(request) )
-            //request => val fleets:Future[List[FleetOld]] = fleetsController.getFleetsByUserId( Some(request) )
+            request => val fleets:Future[List[Fleet]] = fleetsController.getFleetsByUserId( Some(request) )
               onComplete( fleets ) {
-                case Success( v )   => complete{ println(s"getFleetsByUserId OK!...$v"); v }
+                case Success( v )   => complete{ println(s"getFleetsByUserId OK!...$v"); v.toJson }
                 case Failure( err ) => complete{ print(s"getFleetsByUserId Failed!..."); println(err.getMessage); println(err.getLocalizedMessage );err.getMessage }
               }
             }

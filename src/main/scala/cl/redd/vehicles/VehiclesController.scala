@@ -50,51 +50,51 @@ class VehiclesController(implicit val actor:ActorSystem, implicit val materializ
 
   }
 
-  private def vehToOld( vehicle : Vehicle ): VehicleOld = {
-
-    val vehicleOld =
-
-      new VehicleOld(
-        simcard         = vehicle.vehicleFirstBlock.get.simCard,
-        plateNumber     = vehicle.vehicleFirstBlock.get.plateNumber,
-        engineTypeName  = vehicle.vehicleFirstBlock.get.engineTypeName,
-        _m              = vehicle.vehicleFirstBlock.get.imei,
-        validateDate    = vehicle.vehicleFirstBlock.get.validateDate,
-        companyId       = vehicle.vehicleFirstBlock.get.companyId,
-        engineTypeId    = vehicle.vehicleFirstBlock.get.engineTypeId,
-        subVehicleTypeName = vehicle.vehicleFirstBlock.get.subVehicleTypeName,
-        dischargeDate      = vehicle.vehicleFirstBlock.get.dischargeDate,
-        subVehicleTypeId   = vehicle.vehicleFirstBlock.get.subVehicleTypeId,
-        name               = vehicle.vehicleFirstBlock.get.name,
-        vin                = vehicle.vehicleFirstBlock.get.vin,
-        id                 = vehicle.vehicleFirstBlock.get.id,
-        plate_number    = vehicle.vehicleFirstBlock.get.plateNumber,
-        vehicleTypeName = vehicle.vehicleFirstBlock.get.vehicleTypeName,
-        createDate      = vehicle.vehicleFirstBlock.get.createDate,
-        status          = vehicle.vehicleFirstBlock.get.status,
-        extraFields     = vehicle.vehicleLastBlock.get.extraFields,
-
-        lastState = Some( new LastStateOld (
-          date      = vehicle.vehicleLastBlock.get.lastState.get.date,
-          eventId   = vehicle.vehicleLastBlock.get.lastState.get.eventId,
-          lng       = vehicle.vehicleLastBlock.get.lastState.get.longitude,
-          odometer  = vehicle.vehicleLastBlock.get.lastState.get.odometer,
-          hourmeter = vehicle.vehicleLastBlock.get.lastState.get.hourmeter,
-          latitude  = vehicle.vehicleLastBlock.get.lastState.get.latitude,
-          alt       = vehicle.vehicleLastBlock.get.lastState.get.altitude,
-          azimuth   = vehicle.vehicleLastBlock.get.lastState.get.azimuth,
-          speed     = vehicle.vehicleLastBlock.get.lastState.get.speed,
-          _m        = vehicle.vehicleFirstBlock.get.imei,
-          geotext   = vehicle.vehicleLastBlock.get.lastState.get.geotext,
-          _t        = vehicle.vehicleLastBlock.get.lastState.get.date,
-          odo       = vehicle.vehicleLastBlock.get.lastState.get.odometer,
-          lat       = vehicle.vehicleLastBlock.get.lastState.get.latitude,
-          longitude = vehicle.vehicleLastBlock.get.lastState.get.longitude ) )
-      )
-
-    vehicleOld
-
-  }
+//  private def vehToOld( vehicle : Vehicle ): VehicleOld = {
+//
+//    val vehicleOld =
+//
+//      new VehicleOld(
+//        simcard         = vehicle.vehicleFirstBlock.get.simCard,
+//        plateNumber     = vehicle.vehicleFirstBlock.get.plateNumber,
+//        engineTypeName  = vehicle.vehicleFirstBlock.get.engineTypeName,
+//        _m              = vehicle.vehicleFirstBlock.get.imei,
+//        validateDate    = vehicle.vehicleFirstBlock.get.validateDate,
+//        companyId       = vehicle.vehicleFirstBlock.get.companyId,
+//        engineTypeId    = vehicle.vehicleFirstBlock.get.engineTypeId,
+//        subVehicleTypeName = vehicle.vehicleFirstBlock.get.subVehicleTypeName,
+//        dischargeDate      = vehicle.vehicleFirstBlock.get.dischargeDate,
+//        subVehicleTypeId   = vehicle.vehicleFirstBlock.get.subVehicleTypeId,
+//        name               = vehicle.vehicleFirstBlock.get.name,
+//        vin                = vehicle.vehicleFirstBlock.get.vin,
+//        id                 = vehicle.vehicleFirstBlock.get.id,
+//        plate_number    = vehicle.vehicleFirstBlock.get.plateNumber,
+//        vehicleTypeName = vehicle.vehicleFirstBlock.get.vehicleTypeName,
+//        createDate      = vehicle.vehicleFirstBlock.get.createDate,
+//        status          = vehicle.vehicleFirstBlock.get.status,
+//        extraFields     = vehicle.vehicleLastBlock.get.extraFields,
+//
+//        lastState = Some( new LastStateOld (
+//          date      = vehicle.vehicleLastBlock.get.lastState.get.date,
+//          eventId   = vehicle.vehicleLastBlock.get.lastState.get.eventId,
+//          lng       = vehicle.vehicleLastBlock.get.lastState.get.longitude,
+//          odometer  = vehicle.vehicleLastBlock.get.lastState.get.odometer,
+//          hourmeter = vehicle.vehicleLastBlock.get.lastState.get.hourmeter,
+//          latitude  = vehicle.vehicleLastBlock.get.lastState.get.latitude,
+//          alt       = vehicle.vehicleLastBlock.get.lastState.get.altitude,
+//          azimuth   = vehicle.vehicleLastBlock.get.lastState.get.azimuth,
+//          speed     = vehicle.vehicleLastBlock.get.lastState.get.speed,
+//          _m        = vehicle.vehicleFirstBlock.get.imei,
+//          geotext   = vehicle.vehicleLastBlock.get.lastState.get.geotext,
+//          _t        = vehicle.vehicleLastBlock.get.lastState.get.date,
+//          odo       = vehicle.vehicleLastBlock.get.lastState.get.odometer,
+//          lat       = vehicle.vehicleLastBlock.get.lastState.get.latitude,
+//          longitude = vehicle.vehicleLastBlock.get.lastState.get.longitude ) )
+//      )
+//
+//    vehicleOld
+//
+//  }
 
   /*private def vehOldToNew ( vehicleOld: VehicleOld ): Vehicle = {
 
@@ -118,60 +118,20 @@ class VehiclesController(implicit val actor:ActorSystem, implicit val materializ
 
   }*/
 
-  private def saveVehicle( vehicle:Vehicle ) : Future[Vehicle] = {
+  private def saveVehicle( vehicle:Vehicle ) : Future[Vehicle] = ???
 
-    val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )
-
-    val url = s"$serviceHost/metadata/vehicle/update"
-
-    val vehicleOld:VehicleOld = new VehicleOld( simcard         = vehicle.vehicleFirstBlock.get.simCard,
-                                                plateNumber     = vehicle.vehicleFirstBlock.get.plateNumber,
-                                                engineTypeName  = vehicle.vehicleFirstBlock.get.engineTypeName,
-                                                _m              = vehicle.vehicleFirstBlock.get.imei,
-                                                validateDate    = vehicle.vehicleFirstBlock.get.validateDate,
-                                                companyId       = vehicle.vehicleFirstBlock.get.companyId,
-                                                engineTypeId    = vehicle.vehicleFirstBlock.get.engineTypeId,
-                                                subVehicleTypeName = vehicle.vehicleFirstBlock.get.subVehicleTypeName,
-                                                dischargeDate      = vehicle.vehicleFirstBlock.get.dischargeDate,
-                                                subVehicleTypeId   = vehicle.vehicleFirstBlock.get.subVehicleTypeId,
-                                                name               = vehicle.vehicleFirstBlock.get.name,
-                                                vin                = vehicle.vehicleFirstBlock.get.vin,
-                                                id                 = vehicle.vehicleFirstBlock.get.id,
-                                                plate_number    = vehicle.vehicleFirstBlock.get.plateNumber,
-                                                vehicleTypeName = vehicle.vehicleFirstBlock.get.vehicleTypeName,
-                                                createDate      = vehicle.vehicleFirstBlock.get.createDate,
-                                                status          = vehicle.vehicleFirstBlock.get.status,
-                                                extraFields     = vehicle.vehicleLastBlock.get.extraFields,
-
-                                                lastState = Some( new LastStateOld (
-                                                                              date      = vehicle.vehicleLastBlock.get.lastState.get.date,
-                                                                              eventId   = vehicle.vehicleLastBlock.get.lastState.get.eventId,
-                                                                              lng       = vehicle.vehicleLastBlock.get.lastState.get.longitude,
-                                                                              odometer  = vehicle.vehicleLastBlock.get.lastState.get.odometer,
-                                                                              hourmeter = vehicle.vehicleLastBlock.get.lastState.get.hourmeter,
-                                                                              latitude  = vehicle.vehicleLastBlock.get.lastState.get.latitude,
-                                                                              alt       = vehicle.vehicleLastBlock.get.lastState.get.altitude,
-                                                                              azimuth   = vehicle.vehicleLastBlock.get.lastState.get.azimuth,
-                                                                              speed     = vehicle.vehicleLastBlock.get.lastState.get.speed,
-                                                                              _m        = vehicle.vehicleFirstBlock.get.imei,
-                                                                              geotext   = vehicle.vehicleLastBlock.get.lastState.get.geotext,
-                                                                              _t        = vehicle.vehicleLastBlock.get.lastState.get.date,
-                                                                              odo       = vehicle.vehicleLastBlock.get.lastState.get.odometer,
-                                                                              lat       = vehicle.vehicleLastBlock.get.lastState.get.latitude,
-                                                                              longitude = vehicle.vehicleLastBlock.get.lastState.get.longitude ) )
-                                                )
-
-    //  val entity = HttpEntity(MediaTypes.`application/json`, vehicle.toJson.toString())
-
-    val entity = HttpEntity(MediaTypes.`application/json`, vehicleOld.toJson.toString())
-
-    val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( method = HttpMethod.custom( "PUT" ) , uri = url , entity = entity ) )
-
-    future.flatMap {
-      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[Vehicle]
-    }
-
-  }
+//  {
+//
+//    val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )
+//    val url = s"$serviceHost/metadata/vehicle/update"
+//    val entity = HttpEntity(MediaTypes.`application/json`, vehicleOld.toJson.toString())
+//    val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( method = HttpMethod.custom( "PUT" ) , uri = url , entity = entity ) )
+//
+//    future.flatMap {
+//      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[Vehicle]
+//    }
+//
+//  }
 
   private def getById ( realm:String , id:Int , withLastState:Boolean ) : Future[VehicleOld] = {
 

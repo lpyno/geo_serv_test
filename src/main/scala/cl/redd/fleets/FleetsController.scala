@@ -13,36 +13,189 @@ import cl.tastets.life.objects.ServicesEnum
 import spray.json.pimpAny
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 class FleetsController( implicit val system : ActorSystem,
                         implicit val materializer : ActorMaterializer,
                         implicit val ec : ExecutionContext ){
 
-  //def getFleetsByUserId( realm:String , userId:Int , withVehicles:Boolean , fps:FilterPaginateSort ) : Future[List[Fleet]] = ???
-  def getFleetsByUserId( params: Option[GetFleetsByUserId] = None ) : Future[String] = {
-  //def getFleetsByUserId( params: Option[GetFleetsByUserId] = None ) : Future[List[FleetOld]] = {
 
-    println( "in getFleetsByUserId ..." )
+  private def futureToFutureTry[T](f: Future[T]): Future[Try[T]] = f.map(Success(_)).recover({case e => Failure(e)})
 
-    val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )
-    //val serviceHost = "http://localhost:42100"
-    val url = s"$serviceHost/metadata/vehicle/fleet/getMetadataByUser?realm=${params.get.realm.get}"
+  private def fleetOldToNew( fleetOld: FleetOld ) : Fleet = {
+
+    val fleet =
+      new Fleet( id = fleetOld.id, name = fleetOld.name, companyId = fleetOld.companyId,
+        companyName = fleetOld.companyName, defaultFleet = fleetOld.defaultFleet, shared = fleetOld.shared,
+        maxSpeed = fleetOld.maxSpeed, createDate = fleetOld.createDate, startDay = fleetOld.startDay,
+        startHour = fleetOld.startHour, endDate = fleetOld.endDate, endHour = fleetOld.endHour,
+        inactiveDays = fleetOld.inactiveDays, generateReport = fleetOld.generateReport, total = fleetOld.total,
+        realm = fleetOld.realm
+      )
+    fleet
+  }
+
+  //def getFleetStatus( realm:String , id:Int ):Future[VehicleActivity] = ???
+
+  def getFleetStatus( realm:String , id:Long ):Future[VehicleActivity] = {
+
+    val va = {
+      val serviceHost = ReddDiscoveryClient.getNextIpByName(ServicesEnum.METADATAVEHICLE.toString)
+      //http://192.168.173.166:42100/metadata/vehicle/fleet/getMetadataFleetStatus?realm=rslite&id=58
+      val url = s"$serviceHost/metadata/vehicle/fleet/getMetadataFleetStatus?realm=$realm&id=$id"
+      println(s"url... $url")
+      val hds = List(RawHeader("Accept", "application/json"))
+      val future: Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, url, hds))
+      future.flatMap {
+        case HttpResponse(StatusCodes.OK, _, entity, _) => {
+          println(s"fleet status [$id] OK!... $entity")
+          Unmarshal(entity).to[VehicleActivity]
+        }
+      }
+    }
+    return va
+  }
+
+  def getFleetsByUserId(params: Option[GetFleetsByUserId] = None ) : Future[List[Fleet]] = {
+
     val filterOld = new FilterOld( params.get.fps.get.filterParams , params.get.userId , params.get.userProfile , params.get.companyId )
     val sortOld = new SortOld( params.get.fps.get.sortParam , params.get.fps.get.sortOrder )
     val paginatedOld = new PaginatedOld( params.get.fps.get.pagLimit , params.get.fps.get.pagOffset )
     val reqData = new RequestData( Some(filterOld) , Some(sortOld) , Some(paginatedOld) )
-    val hds = List(RawHeader("Accept", "application/json"))
-    val body = HttpEntity( ContentTypes.`application/json`, reqData.toJson.toString() )
-    println( s"url ... $url" )
-    println( s"headers ... $hds" )
-    println( s"body ... $body" )
 
-    val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
+    val futListFleets = {
 
-    future.flatMap {
-      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => println( s"list fleets get OK!... $entity"); Unmarshal(entity).to[String]
-      //case HttpResponse( StatusCodes.OK , _ , entity , _ ) => println( s"list fleets get OK!... $entity"); Unmarshal(entity).to[List[FleetOld]]
+      val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )
+      val url = s"$serviceHost/metadata/vehicle/fleet/getMetadataByUser?realm=${params.get.realm.get}"
+      val hds = List(RawHeader("Accept", "application/json"))
+      val body = HttpEntity( ContentTypes.`application/json`, reqData.toJson.toString() )
+
+      val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
+      future.flatMap {
+        case HttpResponse( StatusCodes.OK , _ , entity , _ ) => {
+          println( s"list fleets get OK!... $entity")
+          Unmarshal(entity).to[List[FleetOld]]
+        }
+      }
+    }.flatMap( list => Future { list.map( fleet => fleetOldToNew( fleet ) ) } )
+
+    futListFleets.map( l => l.filter( f => f.realm.isDefined && f.id.isDefined &&
+                                           f.companyId.isDefined && f.defaultFleet.get != 1 /*filter def fleets*/ ) )
+
+    val fleetsWithActivity = futListFleets.map( list => list.map( fleet => getFleetStatus( fleet.realm.get , fleet.id.get )
+      .map( va => fleet.copy( activity = Some( va ) ) ) ) )
+        .flatMap( l => Future.sequence( l ) )
+
+    if( params.get.withVehicles.get ) {
+      return fleetsWithActivity.flatMap( list => Future.sequence{ list.map( fleet => getMetadataByFleet( fleet , params.get.withLastState.get ) ) } )
+    } else {
+      return fleetsWithActivity
     }
+
+  }
+
+  private def getMetadataByFleet( fleet:Fleet , withLastState:Boolean ):Future[Fleet] = {
+
+    val newFleet = {
+      val serviceHost = ReddDiscoveryClient.getNextIpByName(ServicesEnum.METADATAVEHICLE.toString)
+      val url = s"$serviceHost/metadata/vehicle/getMetadataByFleet?" +
+                s"realm=${fleet.realm.get}&companyId=${fleet.companyId.get}&fleetId=${fleet.id.get}&lastState=$withLastState"
+      println( s"url... $url" )
+      val hds = List(RawHeader("Accept", "application/json"))
+      val future: Future[HttpResponse] = Http().singleRequest(HttpRequest(HttpMethods.GET, url, hds))
+      future.flatMap {
+        case HttpResponse(StatusCodes.OK, _, entity, _) => println(s"getMetadataByFleet [${fleet.id.get}] OK!... $entity");
+          Unmarshal(entity).to[List[VehicleFromGetMetadataByFleet]]
+      }
+    }
+
+    // print vehicles xceived
+    newFleet.map( list => list.foreach( println( _ ) ) )
+
+
+    val newFleetWithNewVehicles = newFleet.map( list => list.map( v => vehOldToNew( v ) ) )
+
+
+    return newFleetWithNewVehicles.map( vList => fleet.copy( fleetVehicles = Some(vList) ) )
+
+  }
+
+  /*
+  def lastStateNew( lastState:Option[LastStateOld] ): Option[LastState] = {
+
+    if ( lastState.isDefined ){
+      return Some( new LastState(
+        date      = if(lastState.get.date.isDefined) lastState.get.date else None,
+        eventId   = if(lastState.get.eventId.isDefined) lastState.get.eventId else None,
+        odometer  = if(lastState.get.odometer.isDefined) lastState.get.odometer else None,
+        hourmeter = if(lastState.get.hourmeter.isDefined) lastState.get.hourmeter else None,
+        latitude  = if(lastState.get.latitude.isDefined) lastState.get.latitude else None,
+        longitude = if(lastState.get.longitude.isDefined) lastState.get.longitude else None,
+        altitude  = if(lastState.get.alt.isDefined) lastState.get.alt else None,
+        azimuth   = if(lastState.get.azimuth.isDefined) lastState.get.azimuth else None,
+        speed     = if(lastState.get.speed.isDefined) lastState.get.speed else None,
+        geotext   = if(lastState.get.geotext.isDefined) lastState.get.geotext else None
+        /*eventName = lastState.get.eventId*/
+        /*iconName = ???*/
+      ) )
+
+    } else return Some( new LastState )
+
+  }*/
+
+  def lastStateNew( lastState:LastStateOld ):Option[LastState] = {
+
+    //if ( lastState.isDefined ){
+      return Some( new LastState(
+        date      = if(lastState.date.isDefined) lastState.date else None,
+        eventId   = if(lastState.eventId.isDefined) lastState.eventId else None,
+        odometer  = if(lastState.odometer.isDefined) lastState.odometer else None,
+        hourmeter = if(lastState.hourmeter.isDefined) lastState.hourmeter else None,
+        latitude  = if(lastState.latitude.isDefined) lastState.latitude else None,
+        longitude = if(lastState.longitude.isDefined) lastState.longitude else None,
+        altitude  = if(lastState.alt.isDefined) lastState.alt else None,
+        azimuth   = if(lastState.azimuth.isDefined) lastState.azimuth else None,
+        speed     = if(lastState.speed.isDefined) lastState.speed else None,
+        geotext   = if(lastState.geotext.isDefined) lastState.geotext else None
+        /*eventName = lastState.get.eventId*/
+        /*iconName = ???*/
+      ) )
+
+    //} else return Some( new LastState )
+
+  }
+
+  //def vehOldToNew( vOld:Option[VehicleFromGetMetadataByFleet] ):Option[Vehicle] = {
+  def vehOldToNew( vo:VehicleFromGetMetadataByFleet ):Vehicle = {
+
+    //if ( vOld.isDefined ){
+    //val vo = vOld.get
+      //return Some( new Vehicle (
+      //println( s"vo... $vo" )
+      return new Vehicle (
+        id                = if( vo.vehicleId.isDefined ) vo.vehicleId else None,
+        name              = if( vo.name.isDefined ) vo.name else None,
+        /*activityStatus,*/
+        companyId         = if( vo.companyId.isDefined ) vo.companyId else None,
+        /*rutCompany*/
+        vin               = if( vo.vin.isDefined ) vo.vin else None,
+        plateNumber       = if( vo.plateNumber.isDefined ) vo.plateNumber else None,
+        /*engineTypeId      = vOld.engineTypeId,*/
+        /*subVehicleTypeId  = vOld.subVehicleTypeId,*/
+        createDate        = if( vo.createDate.isDefined ) vo.createDate else None,
+        validateDate      = if( vo.validateDate.isDefined ) vo.validateDate else None,
+        dischargeDate     = if( vo.dischargeDate.isDefined ) vo.dischargeDate else None,
+        imei              = if( vo._m.isDefined ) vo._m else None,
+        deviceTypeId      = if( vo.deviceTypeId.isDefined ) vo.deviceTypeId else None,
+        simCard           = if( vo.simcard.isDefined ) vo.simcard else None,
+        /*engineTypeName  = vOld.engineTypeName,*/
+        deviceTypeName    = if( vo.deviceTypeName.isDefined ) vo.deviceTypeName else None,
+        /*subVehicleTypeName = vOld.subVehicleTypeName,*/
+        /*vehicleTypeName  = vOld.vehicleTypeName,*/
+        realm              = if( vo.realm.isDefined ) vo.realm else None,
+        extraFields        = if( vo.extraFields.isDefined ) vo.extraFields else None,
+        lastState          = if( vo.lastState.isDefined ) lastStateNew( vo.lastState.get ) else Some( new LastState ) )
+    //} else return new Vehicle
 
   }
 
