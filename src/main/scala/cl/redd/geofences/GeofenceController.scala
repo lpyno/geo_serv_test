@@ -76,7 +76,17 @@ class GeofenceController ( implicit val actor:ActorSystem, implicit val actorMat
 
   /** 3.3 "/getByCompany", GET method */
 
-  def getGeofencesByCompanyId( realm:String , companyId:Int , fps:FilterPaginateSort ) : List[Geofence] = ???
+  def getGeofencesByCompanyId( realm:String , companyId:Int , fps:FilterPaginateSort ) : Future[List[Geofence]] = {
+
+    val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
+    // http://192.168.173.166:41200/geofence/getAllPaginated?realm=rslite&companyId=144
+    val url = s"$serviceHost/geofence/getAllPaginated?realm=$realm&companyId=$companyId"
+    val entity = HttpEntity(MediaTypes.`application/json`, fps.toJson.toString())
+    val future = Http().singleRequest( HttpRequest( method = HttpMethod.custom( "POST" ) , uri = url , entity = entity ) )
+
+    future.flatMap { case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[Geofence]]}
+
+  }
 
   /**3.4 "/getFromCompanyByParameter" ( * "getByCompany" w/ Filter? ) */
 

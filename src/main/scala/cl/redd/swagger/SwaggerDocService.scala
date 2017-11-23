@@ -11,9 +11,9 @@ import io.swagger.models.auth.BasicAuthDefinition
 
 object SwaggerDocService extends SwaggerHttpService {
 
-  override val apiClasses = Set( classOf[GeofenceService] , classOf[AuthenticationService] , classOf[VehiclesService] , classOf[FleetsService] )
+  override val apiClasses = Set( /*classOf[GeofenceService] ,*/ classOf[AuthenticationService] , classOf[VehiclesService] , classOf[FleetsService] )
   override val info = Info( version = "0.0.1",
-                            title = "[Auth - Geofences - Vehicles - Fleets] Service" )
+                            title = "[Auth - Vehicles - Fleets] Service" )
   override val host = "localhost:12345"
   override val basePath = "/"
   override val externalDocs = Some(new ExternalDocs("Core Docs", "http://acme.com/docs"))

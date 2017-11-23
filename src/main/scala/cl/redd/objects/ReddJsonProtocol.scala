@@ -70,7 +70,7 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   implicit val getVehiclesByIdFormat = jsonFormat4( GetVehiclesById )
   implicit val midFormatOldFormat = jsonFormat1( MidFormatOld )
   implicit val getListByMidsFormat = jsonFormat3( GetListByMids )
-  implicit val vehicleActivityFormat = jsonFormat4( VehicleActivity )
+  implicit val vehicleActivityFormat = jsonFormat2( VehicleActivity )
   implicit val getFleetsByUserIdFormat = jsonFormat7( GetFleetsByUserId )
   implicit val filterOldFormat = jsonFormat4( FilterOld )
   implicit val sortOldFormat = jsonFormat2( SortOld )

@@ -39,7 +39,7 @@ class FleetsService( implicit val system:ActorSystem,
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam( name  = "fleet",
-        value = "Objeto Flota",
+        value = "Objeto Request",
         required = true,
         dataTypeClass = classOf[GetFleetsByUserId],
         paramType = "body" )

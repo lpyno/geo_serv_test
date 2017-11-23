@@ -20,8 +20,6 @@ class FleetsController( implicit val system : ActorSystem,
                         implicit val ec : ExecutionContext ){
 
 
-  private def futureToFutureTry[T](f: Future[T]): Future[Try[T]] = f.map(Success(_)).recover({case e => Failure(e)})
-
   private def fleetOldToNew( fleetOld: FleetOld ) : Fleet = {
 
     val fleet =
@@ -34,8 +32,6 @@ class FleetsController( implicit val system : ActorSystem,
       )
     fleet
   }
-
-  //def getFleetStatus( realm:String , id:Int ):Future[VehicleActivity] = ???
 
   def getFleetStatus( realm:String , id:Long ):Future[VehicleActivity] = {
 
@@ -66,30 +62,31 @@ class FleetsController( implicit val system : ActorSystem,
     val futListFleets = {
 
       val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )
-      val url = s"$serviceHost/metadata/vehicle/fleet/getMetadataByUser?realm=${params.get.realm.get}"
-      val hds = List(RawHeader("Accept", "application/json"))
-      val body = HttpEntity( ContentTypes.`application/json`, reqData.toJson.toString() )
+      val url         = s"$serviceHost/metadata/vehicle/fleet/getMetadataByUser?realm=${params.get.realm.get}"
+      val hds         = List(RawHeader("Accept", "application/json"))
+      val body        = HttpEntity( ContentTypes.`application/json`, reqData.toJson.toString() )
 
       val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
-      future.flatMap {
-        case HttpResponse( StatusCodes.OK , _ , entity , _ ) => {
-          println( s"list fleets get OK!... $entity")
-          Unmarshal(entity).to[List[FleetOld]]
-        }
-      }
+
+      future.flatMap { case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[FleetOld]] }
+
     }.flatMap( list => Future { list.map( fleet => fleetOldToNew( fleet ) ) } )
-
-    futListFleets.map( l => l.filter( f => f.realm.isDefined && f.id.isDefined &&
-                                           f.companyId.isDefined && f.defaultFleet.get != 1 /*filter def fleets*/ ) )
-
-    val fleetsWithActivity = futListFleets.map( list => list.map( fleet => getFleetStatus( fleet.realm.get , fleet.id.get )
-      .map( va => fleet.copy( activity = Some( va ) ) ) ) )
-        .flatMap( l => Future.sequence( l ) )
-
+      .map( l => l.filter( f => f.realm.isDefined     &&
+                                f.id.isDefined        &&
+                                f.companyId.isDefined &&
+                                ( f.defaultFleet.isEmpty || f.defaultFleet.get != 1 ) ) )
+    // add activity status
+    val fleetsWithActivity = {
+      futListFleets.map(list => list.map(fleet => getFleetStatus(fleet.realm.get, fleet.id.get)
+        .map(va => fleet.copy(activity = Some(va)))))
+        .flatMap(l => Future.sequence(l))
+    }
+    // add vehicles/laststate
     if( params.get.withVehicles.get ) {
       return fleetsWithActivity.flatMap( list => Future.sequence{ list.map( fleet => getMetadataByFleet( fleet , params.get.withLastState.get ) ) } )
+              //.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } ) )
     } else {
-      return fleetsWithActivity
+      return fleetsWithActivity//.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } )
     }
 
   }
@@ -110,8 +107,7 @@ class FleetsController( implicit val system : ActorSystem,
     }
 
     // print vehicles xceived
-    newFleet.map( list => list.foreach( println( _ ) ) )
-
+    //newFleet.map( list => list.foreach( println( _ ) ) )
 
     val newFleetWithNewVehicles = newFleet.map( list => list.map( v => vehOldToNew( v ) ) )
 
@@ -120,32 +116,8 @@ class FleetsController( implicit val system : ActorSystem,
 
   }
 
-  /*
-  def lastStateNew( lastState:Option[LastStateOld] ): Option[LastState] = {
-
-    if ( lastState.isDefined ){
-      return Some( new LastState(
-        date      = if(lastState.get.date.isDefined) lastState.get.date else None,
-        eventId   = if(lastState.get.eventId.isDefined) lastState.get.eventId else None,
-        odometer  = if(lastState.get.odometer.isDefined) lastState.get.odometer else None,
-        hourmeter = if(lastState.get.hourmeter.isDefined) lastState.get.hourmeter else None,
-        latitude  = if(lastState.get.latitude.isDefined) lastState.get.latitude else None,
-        longitude = if(lastState.get.longitude.isDefined) lastState.get.longitude else None,
-        altitude  = if(lastState.get.alt.isDefined) lastState.get.alt else None,
-        azimuth   = if(lastState.get.azimuth.isDefined) lastState.get.azimuth else None,
-        speed     = if(lastState.get.speed.isDefined) lastState.get.speed else None,
-        geotext   = if(lastState.get.geotext.isDefined) lastState.get.geotext else None
-        /*eventName = lastState.get.eventId*/
-        /*iconName = ???*/
-      ) )
-
-    } else return Some( new LastState )
-
-  }*/
-
   def lastStateNew( lastState:LastStateOld ):Option[LastState] = {
 
-    //if ( lastState.isDefined ){
       return Some( new LastState(
         date      = if(lastState.date.isDefined) lastState.date else None,
         eventId   = if(lastState.eventId.isDefined) lastState.eventId else None,
@@ -157,21 +129,12 @@ class FleetsController( implicit val system : ActorSystem,
         azimuth   = if(lastState.azimuth.isDefined) lastState.azimuth else None,
         speed     = if(lastState.speed.isDefined) lastState.speed else None,
         geotext   = if(lastState.geotext.isDefined) lastState.geotext else None
-        /*eventName = lastState.get.eventId*/
-        /*iconName = ???*/
       ) )
-
-    //} else return Some( new LastState )
 
   }
 
-  //def vehOldToNew( vOld:Option[VehicleFromGetMetadataByFleet] ):Option[Vehicle] = {
   def vehOldToNew( vo:VehicleFromGetMetadataByFleet ):Vehicle = {
 
-    //if ( vOld.isDefined ){
-    //val vo = vOld.get
-      //return Some( new Vehicle (
-      //println( s"vo... $vo" )
       return new Vehicle (
         id                = if( vo.vehicleId.isDefined ) vo.vehicleId else None,
         name              = if( vo.name.isDefined ) vo.name else None,
@@ -195,7 +158,6 @@ class FleetsController( implicit val system : ActorSystem,
         realm              = if( vo.realm.isDefined ) vo.realm else None,
         extraFields        = if( vo.extraFields.isDefined ) vo.extraFields else None,
         lastState          = if( vo.lastState.isDefined ) lastStateNew( vo.lastState.get ) else Some( new LastState ) )
-    //} else return new Vehicle
 
   }
 

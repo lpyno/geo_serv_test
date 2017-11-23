@@ -11,7 +11,7 @@ import cl.redd.objects._
 import io.swagger.annotations._
 import cl.redd.objects.ReddJsonProtocol._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
@@ -129,8 +129,8 @@ class GeofenceService( implicit val actor:ActorSystem, implicit val actorMateria
   def getByCompany =
   path("getByCompany") {
     post {
-      entity(as[GetByCompanyReq]) { request =>
-        complete { "getByCompany method" }
+      entity(as[GetByCompanyReq]) {
+        request => complete { "getByCompany method" }
       }
     }
   }
