@@ -1,9 +1,6 @@
-package cl.redd.geofences
+package cl.redd.objects
 
-import akka.actor.{Actor, ActorLogging}
-import cl.redd.objects.{Geofence, FilterPaginateSort}
-
-object GeofenceActor {
+object RequestResponses {
 
   /** save */
   case class SaveRequest ( realm:String , geofence:Geofence )
@@ -12,7 +9,7 @@ object GeofenceActor {
   case class GetByIdReq ( realm:String , geofenceIds:List[Int] , fps:FilterPaginateSort )
   case class GetByIdResp( geofences:List[Geofence] )
   /** getByCompany */
-  case class GetByCompanyReq ( realm:String , companyId:Int , fps:FilterPaginateSort )
+  case class GetByCompanyReq ( realm:Option[String]=None, companyId:Option[Int]=None, fps:Option[FilterPaginateSort]=None )
   case class GetByCompanyResp( geofences:List[Geofence] )
   /** getFromCompanyByParameter */
   case class GetFromCompanyByParamReq (realm:String , companyId:Int , paramName:String/*Geofence.{param}*/ , paramValue:String , fps:FilterPaginateSort )
@@ -29,14 +26,3 @@ object GeofenceActor {
   /** login */
 
 }
-
-class GeofenceActor extends Actor with ActorLogging {
-  import GeofenceActor._
-
-  def receive: Receive = {
-    case request: SaveRequest => { sender ! SaveResponse( request.geofence ) }
-
-  }
-}
-
-

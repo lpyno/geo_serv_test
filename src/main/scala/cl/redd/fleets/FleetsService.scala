@@ -63,24 +63,5 @@ class FleetsService( implicit val system:ActorSystem,
           }
         }
       }
-
-
-
-  /*
-  /fleets/getByUser'
-
-
-[10:36]
-withVehicles : true/false
-
-
-[10:36]
-withusers: true/false
-
-
-[10:37]
-'/fleets/getById'
-   */
-
 }
 

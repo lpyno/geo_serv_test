@@ -13,9 +13,9 @@ import cl.redd.fleets.FleetsService
 import cl.redd.vehicles.VehiclesService
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 
-object GeofenceMicroservice extends App with RouteConcatenation with SprayJsonSupport {
+object RestApi extends App with RouteConcatenation with SprayJsonSupport {
 
-  implicit val system = ActorSystem("geofence-microservice")
+  implicit val system = ActorSystem("rastreosat-back")
 
   sys.addShutdownHook(system.terminate())
 
@@ -26,7 +26,7 @@ object GeofenceMicroservice extends App with RouteConcatenation with SprayJsonSu
 
   val routes =
     cors() (
-      new GeofenceService().route ~
+      new GeofenceApi().route ~
       new AuthenticationService().route ~
       new VehiclesService().route ~
       new FleetsService().route ~

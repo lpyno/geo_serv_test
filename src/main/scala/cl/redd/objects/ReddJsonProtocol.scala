@@ -1,7 +1,7 @@
 package cl.redd.objects
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import cl.redd.geofences.GeofenceActor._
+import cl.redd.objects.RequestResponses._
 import spray.json._
 
 object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
@@ -32,8 +32,6 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   // delete
   implicit val deleteReqFormat  = jsonFormat2 ( DeleteReq )
   implicit val deleteRespFormat = jsonFormat1 ( DeleteResp )
-  // ChildOld
-//  implicit val childOldFormat      = jsonFormat8( ChildOld )
   // FunctionalityOld
   implicit val functionalityOldFormat = jsonFormat5( FunctionalityOld )
   // ProfileOld
@@ -80,5 +78,8 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   implicit val vehicleFromGetByCompanyFormat = jsonFormat18( VehicleFromGetByCompany )
   implicit val vehicleFromGetMetadataByFleetFormat = jsonFormat18( VehicleFromGetMetadataByFleet )
   implicit val fleetFormat = jsonFormat18( Fleet )
+  implicit val geofenceOldFormat = jsonFormat16( GeofenceOld )
+  implicit val filterMainFormat = jsonFormat3( FilterMain )
+  implicit val geofGetAllPagNewReqFormat = jsonFormat2( GeofGetAllPagNewReq )
 
 }

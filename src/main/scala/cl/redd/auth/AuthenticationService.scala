@@ -1,12 +1,13 @@
 package cl.redd.auth
 
 import javax.ws.rs.Path
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import cl.redd.geofences.GeofenceActor._
 import cl.redd.objects.ReddJsonProtocol._
+import cl.redd.objects.RequestResponses.GetByIdReq
 import cl.redd.objects._
 import io.swagger.annotations._
 
