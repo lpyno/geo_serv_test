@@ -2,16 +2,17 @@ package cl.redd.objects
 
 case class Geofence (
 
-  id		                 : Option[Int]     = None, //*
+  id		                 : Option[Long]     = None, //*
   name		               : Option[String]  = None, //*
   alarm		               : Option[Boolean] = None, //*
   colour	               : Option[String]  = None, // ? in table geo.geofence
   buffer	               : Option[Int]     = None, //*
+  lastUpdateTs           : Option[Long]    = None,
   latitude	             : Option[Double]  = None, //*
   longitude	             : Option[Double]  = None, //*
   theGeom 	             : Option[String]  = None, //*
   bboxGeom	             : Option[String]  = None, //*
-  userId	               : Option[Int]     = None, // ? in table geo.geofence
+  userId	               : Option[Long]     = None, // ? in table geo.geofence
   total		               : Option[Int]     = None, //*
   realm		               : Option[String]  = None, // ? in req query
   typeId	               : Option[Int]     = None, //*

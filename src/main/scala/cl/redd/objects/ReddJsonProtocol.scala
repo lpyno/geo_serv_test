@@ -10,12 +10,12 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   // FilterPaginateSort
   implicit val fpsFormat = jsonFormat5( FilterPaginateSort )
   // Geofence
-  implicit val geofenceFormat = jsonFormat18( Geofence )
+  implicit val geofenceFormat = jsonFormat19( Geofence )
   // save
   implicit val saveReqFormat  = jsonFormat2 ( SaveRequest )
   implicit val saveRespFormat = jsonFormat1 ( SaveResponse )
   // getById
-  implicit val getByIdReqFormat   = jsonFormat3 ( GetByIdReq )
+  implicit val getByIdReqFormat   = jsonFormat2 ( GetByIdReq )
   implicit val getByIdRespFormat  = jsonFormat1 ( GetByIdResp )
   // getByCompany
   implicit val getByCompanyReqFormat  = jsonFormat3( GetByCompanyReq )
@@ -81,5 +81,5 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   implicit val geofenceOldFormat = jsonFormat16( GeofenceOld )
   implicit val filterMainFormat = jsonFormat3( FilterMain )
   implicit val geofGetAllPagNewReqFormat = jsonFormat2( GeofGetAllPagNewReq )
-
+  implicit val geofenceToSaveFormat = jsonFormat11( GeofenceToSave )
 }

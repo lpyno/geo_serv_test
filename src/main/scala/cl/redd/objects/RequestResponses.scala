@@ -6,7 +6,7 @@ object RequestResponses {
   case class SaveRequest ( realm:String , geofence:Geofence )
   case class SaveResponse( geofence:Geofence )
   /** getById */
-  case class GetByIdReq ( realm:String , geofenceIds:List[Int] , fps:FilterPaginateSort )
+  case class GetByIdReq ( realm:Option[String]=None , geofenceId:Option[Int]=None )
   case class GetByIdResp( geofences:List[Geofence] )
   /** getByCompany */
   case class GetByCompanyReq ( realm:Option[String]=None, companyId:Option[Int]=None, fps:Option[FilterPaginateSort]=None )

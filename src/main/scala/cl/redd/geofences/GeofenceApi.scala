@@ -11,7 +11,6 @@ import cl.redd.objects.ReddJsonProtocol._
 import cl.redd.objects.RequestResponses._
 import cl.redd.objects._
 import io.swagger.annotations._
-import spray.json._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,13 +19,13 @@ import scala.util.{Failure, Success}
 
 @Api(value = "/geofences", produces = "application/json")
 @Path("/")
-class GeofenceApi( implicit val actor:ActorSystem, implicit val actorMaterializer: ActorMaterializer, implicit val ec:ExecutionContext )
+class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:ActorMaterializer, implicit val ec:ExecutionContext )
   extends Directives {
 
   implicit val timeout = Timeout(5.seconds)
   implicit val jsonStreamingSupport: JsonEntityStreamingSupport = EntityStreamingSupport.json()
 
-  lazy val geofences = new Geofences()
+  val geofences = new Geofences()
 
   val route = save ~
               getById ~
@@ -38,7 +37,7 @@ class GeofenceApi( implicit val actor:ActorSystem, implicit val actorMaterialize
 
   /** 3.1 "/save", POST method */
   @Api( value = "/save", produces = "application/json")
-  @Path("/save")
+  @Path("geofences/save")
   @ApiOperation(value = "Crea Geocerca", nickname = "saveGeofence", httpMethod = "POST", response = classOf[Geofence])
   @ApiImplicitParams(
     Array(
@@ -51,7 +50,7 @@ class GeofenceApi( implicit val actor:ActorSystem, implicit val actorMaterialize
       new ApiImplicitParam( name  = "geofence",
                             value = "nueva geocerca",
                             required = true,
-                            dataTypeClass = classOf[Geofence],
+                            dataTypeClass = classOf[GeofenceToSave],
                             paramType = "body" )
     )
   )
@@ -59,20 +58,30 @@ class GeofenceApi( implicit val actor:ActorSystem, implicit val actorMaterialize
     new ApiResponse(code = 500, message = "Internal server error")
   ))
   def save =
-    path("save") {
-      post {
-        entity(as[Geofence]) {
-          println( "testing debug messages..." )
-          request => complete { geofences.save( Some( request ) ) }
-
+    pathPrefix("geofences") {
+      path("save") {
+        post {
+          entity(as[Geofence]) {
+            request => val resp = geofences.save( request )
+            onComplete( resp ) {
+              case Success( resp ) => complete {
+                println( "Saved OK!..." )
+                resp
+              }
+              case Failure( err ) => complete {
+                println( s"Save Failed... $err" )
+                err
+              }
+            }
+          }
         }
       }
     }
 
   /** 3.2 "/getById", GET method */
   @Api(value = "/getById", produces = "application/json")
-  @Path("/getById")
-  @ApiOperation(value = "Solicita geocercas por ID", nickname = "getById", httpMethod = "GET", response = classOf[GetByIdResp])
+  @Path("geofences/getById")
+  @ApiOperation(value = "Solicita geocercas por ID", nickname = "getById", httpMethod = "GET", response = classOf[Geofence])
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam( name = "realm",
@@ -80,15 +89,10 @@ class GeofenceApi( implicit val actor:ActorSystem, implicit val actorMaterialize
                             required = true,
                             dataTypeClass = classOf[String],
                             paramType = "query" ),
-      new ApiImplicitParam( name = "geofenceIds",
-                            value = "lista de identificadores requeridos ( >= 1 ) ",
+      new ApiImplicitParam( name = "id",
+                            value = "id geocerca a buscar",
                             required = true,
-                            dataTypeClass = classOf[List[Int]],
-                            paramType = "query" ),
-      new ApiImplicitParam( name = "fps",
-                            value = "información para filtro, paginado y ordenamiento",
-                            required = true,
-                            dataTypeClass = classOf[FilterPaginateSort],
+                            dataTypeClass = classOf[Int],
                             paramType = "query" )
     )
   )
@@ -96,14 +100,25 @@ class GeofenceApi( implicit val actor:ActorSystem, implicit val actorMaterialize
     new ApiResponse(code = 500, message = "Internal server error")
   ))
   def getById =
-    path("getById") {
-      post {
-        entity(as[GetByIdReq]) { request =>
-          complete { "getById method" }
+    pathPrefix("geofences") {
+      path("getById") {
+        get {
+          parameters( 'realm.as[Option[String]] , 'id.as[Option[Long]] ) {
+            ( realm , id ) => val geofence: Future[Geofence] = geofences.getById( realm, id )
+            onComplete(geofence) {
+              case Success(geofence) => complete {
+                println("getById OK!")
+                geofence
+              }
+              case Failure(err) => complete {
+                println(s"getById failed... ${err.getMessage}")
+                err
+              }
+            }
+          }
         }
       }
     }
-
   /** 3.3 "/getByCompany", POST method */
   @Api(value = "/getByCompany", produces = "application/json")
   @Path("/geofences/getByCompany")
@@ -127,27 +142,19 @@ class GeofenceApi( implicit val actor:ActorSystem, implicit val actorMaterialize
           entity(as[GetByCompanyReq]) {
             request => val rv: Future[List[Geofence]] = geofences.getGeofencesByCompanyId( request.realm, request.companyId, request.fps )
             onComplete( rv ) {
-               case Success(geofences) => complete { println( "geofences by company OK!" ); geofences.toJson  }
-               case Failure(err)       => complete { println( s"geofences by company failed!...${err.getMessage}" ); err.getMessage }
+               case Success(geofences) => complete {
+                 println( "geofences by company OK!" )
+                 geofences
+               }
+               case Failure(err) => complete {
+                 println( s"geofences by company failed!...${err.getMessage}" )
+                 err.getMessage
+               }
             }
           }
         }
       }
     }
-
-  /*
-  def streamingJsonRoute =
-    path("streaming-json") {
-      get {
-        val sourceOfNumbers = Source(1 to 1000000)
-        val sourceOfDetailedMessages =
-          sourceOfNumbers.map(num => DetailedMessage(UUID.randomUUID(), s"Hello $num"))
-            .throttle(elements = 1000, per = 1 second, maximumBurst = 1, mode = ThrottleMode.Shaping)
-
-        complete(sourceOfDetailedMessages)
-      }
-    }
- */
 
   /** 3.4 "/getFromCompanyByParameter" ( * "getByCompany" w/ Filter? ) */
   // getCompanyGeofencesByParameter(realm:String , companyId:Int , paramName:ParamEnum , paramValue:Object , fps:FilterPaginateSort ) : List[Geofence] = ???
