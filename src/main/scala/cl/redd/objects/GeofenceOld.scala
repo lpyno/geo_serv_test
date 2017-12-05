@@ -9,7 +9,7 @@ case class GeofenceOld (
                          alarm		               : Option[Boolean] = None, //*
                          latitude	               : Option[Double]  = None, //*
                          colour                  : Option[String]  = None,
-                         userid                  : Option[Long]     = None,
+                         userId                  : Option[Long]     = None,
                          longitude	             : Option[Double]  = None, //*
                          total		               : Option[Int]     = None, //*
                          typeId	                 : Option[Int]     = None, //*

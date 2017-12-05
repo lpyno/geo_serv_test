@@ -48,10 +48,7 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
     val futHttpResp = Http().singleRequest( HttpRequest( HttpMethods.GET , url, hds ) )
 
     futHttpResp.flatMap{
-      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => {
-        println( "getById httpResponse OK!!" )
-        Unmarshal(entity).to[GeofenceOld]
-      }
+      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[GeofenceOld]
     }.map( gOld => newFromOld( gOld, realm, gOld.companyId ) )
 
   }
@@ -67,27 +64,16 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
                     else
                       None
     val request = GeofGetAllPagNewReq( filter , paginated )
-    println( s"request: $request" )
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
-    println( s"serviceHost: $serviceHost" )
     val url         = s"$serviceHost/geofence/getAllPaginatedNew"
-    println( s"url: $url" )
     val hds         = List(RawHeader("Accept", "application/json"))
-    println( s"headers: $hds" )
     val body        = HttpEntity( ContentTypes.`application/json`, request.toJson.toString() )
-    println( s"body: $body" )
 
     val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
 
-    val oldList = future.flatMap {
-      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => {
-        println( "httpResponse OK!!" )
-        Unmarshal(entity).to[List[GeofenceOld]]
-      }
-    }
-    println( oldList )
-    val rv = oldList.map( listGf => listGf.map( gf => newFromOld( gf , realm , companyId ) ) )
-    rv
+    future.flatMap {
+      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[GeofenceOld]]
+    }.map( listGf => listGf.map( gf => newFromOld( gf , realm , companyId ) ) )
 
   }
 
@@ -122,7 +108,7 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
     Geofence(
       geofence.id, geofence.name, geofence.alarm, geofence.colour, geofence.buffer, geofence.last_update_timestamp,
       geofence.latitude, geofence.longitude, geofence.theGeom, geofence.bboxGeom,
-      geofence.userid, geofence.total, realm , geofence.typeId, companyId, geofence.maxSpeed,
+      geofence.userId, geofence.total, realm , geofence.typeId, companyId, geofence.maxSpeed,
       geofence.extraFields, strToVector( geofence.theGeom ), strToVector( geofence.bboxGeom )
     )
 

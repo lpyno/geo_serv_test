@@ -41,13 +41,7 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
   @ApiOperation(value = "Crea Geocerca", nickname = "saveGeofence", httpMethod = "POST", response = classOf[Geofence])
   @ApiImplicitParams(
     Array(
-      /*new ApiImplicitParam( name  = "realm",
-                            value = "dominio donde se creará la nueva geocerca",
-                            required = true,
-                            dataTypeClass = classOf[String],
-                            paramType = "body" ),*/
-
-      new ApiImplicitParam( name  = "geofence",
+       new ApiImplicitParam( name  = "geofence",
                             value = "nueva geocerca",
                             required = true,
                             dataTypeClass = classOf[GeofenceToSave],
