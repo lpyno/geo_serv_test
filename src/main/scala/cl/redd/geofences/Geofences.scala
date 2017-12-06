@@ -19,7 +19,6 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
   extends Directives {
 
   /** 3.1 "/save", POST method */
-
   def save( geofence:Geofence ) : Future[Geofence] = {
 
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
@@ -37,7 +36,6 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
   }
 
   /** 3.2 "/getById", GET method */
-
   def getGeofenceByIds( realm:String , geofenceIds:List[Int] , fps:FilterPaginateSort ) : List[Geofence] = ???
 
   def getById ( realm:Option[String]=None , geofenceId:Option[Long]=None ) : Future[Geofence] = {
@@ -79,11 +77,11 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
 
   def queryOldGeofences( realm:Option[String], companyId:Option[Int], fps:Option[FilterPaginateSort] ) : Future[HttpResponse] = {
 
-    val request     = constructRequest( realm , companyId , fps )
+    val request = constructRequest( realm , companyId , fps )
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
-    val url         = s"$serviceHost/geofence/getAllPaginatedNew"
-    val hds         = List(RawHeader("Accept", "application/json"))
-    val body        = HttpEntity( ContentTypes.`application/json`, request.toJson.toString() )
+    val url = s"$serviceHost/geofence/getAllPaginatedNew"
+    val hds = List(RawHeader("Accept", "application/json"))
+    val body = HttpEntity( ContentTypes.`application/json`, request.toJson.toString )
 
     Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
 
@@ -106,7 +104,7 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
   def newFromOld( geofence:GeofenceOld, realm:Option[String], companyId:Option[Int] ): Geofence = {
 
     Geofence(
-      geofence.id, geofence.name, geofence.alarm, geofence.colour, geofence.buffer, geofence.last_update_timestamp,
+      geofence.id, geofence.name, geofence.alarm, geofence.colour, geofence.buffer, geofence.lastUpdateTs,
       geofence.latitude, geofence.longitude, geofence.theGeom, geofence.bboxGeom,
       geofence.userId, geofence.total, realm , geofence.typeId, companyId, geofence.maxSpeed,
       geofence.extraFields, strToVector( geofence.theGeom ), strToVector( geofence.bboxGeom )
@@ -149,7 +147,6 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
 
   }
 
-
   /**3.4 "/getFromCompanyByParameter" ( * "getByCompany" w/ Filter? ) */
 
   def getCompanyGeofencesByParameter(realm:String , companyId:Int , paramName:String, paramValue:String , fps:FilterPaginateSort ) : List[Geofence] = ???
@@ -164,6 +161,20 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
 
   /** 3.7 "/delete", DELETE method */
 
-  def delete( realm:String , geofenceId:Int ) : Geofence = ???
+  def delete( geofenceId:Long ) : Future[Map[String,Long]] = {
+
+    val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
+    val url = s"$serviceHost/geofence/delete/$geofenceId"
+    val hds = List(RawHeader("Accept", "application/json"))
+    val futHttpResp = Http().singleRequest( HttpRequest( HttpMethods.DELETE , url, hds ) )
+
+    val rv = futHttpResp.flatMap{
+      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => {
+        println(  )
+        Unmarshal(entity).to[Map[String,Long]]
+      }
+    }
+    rv
+  }
 
 }

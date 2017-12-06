@@ -5,7 +5,7 @@ case class GeofenceOld (
                          id		                   : Option[Long]     = None, //*
                          name		                 : Option[String]  = None, //*
                          buffer	                 : Option[Int]     = None, //*
-                         last_update_timestamp   : Option[Long]    = None,
+                         lastUpdateTs            : Option[Long]    = None,
                          alarm		               : Option[Boolean] = None, //*
                          latitude	               : Option[Double]  = None, //*
                          colour                  : Option[String]  = None,

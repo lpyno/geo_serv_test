@@ -6,13 +6,13 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import cl.redd.objects._
 import cl.redd.objects.ReddJsonProtocol._
+import cl.redd.objects._
 import io.swagger.annotations._
+
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import spray.json._
 
 @Api(value = "/fleets", produces = "application/json")
 @Path("/")
@@ -56,8 +56,14 @@ class FleetsService( implicit val system:ActorSystem,
           entity(as[GetFleetsByUserId]) {
             request => val fleets:Future[List[Fleet]] = fleetsController.getFleetsByUserId( Some(request) )
               onComplete( fleets ) {
-                case Success( v )   => complete{ println(s"getFleetsByUserId OK!...$v"); v.toJson }
-                case Failure( err ) => complete{ print(s"getFleetsByUserId Failed!..."); println(err.getMessage); println(err.getLocalizedMessage );err.getMessage }
+                case Success( fleets ) => complete{
+                  println(s"getFleetsByUserId OK!")
+                  fleets
+                }
+                case Failure( err ) => complete{
+                  print(s"getFleetsByUserId Failed!...${err.getMessage}")
+                  err
+                }
               }
             }
           }

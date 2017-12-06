@@ -4,6 +4,7 @@ import javax.ws.rs.Path
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.common.{EntityStreamingSupport, JsonEntityStreamingSupport}
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
@@ -32,8 +33,8 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
               getByCompany ~
               getFromCompanyByParameter ~
               getFromUserByParameter ~
-              update //~
-              //delete
+              update ~
+              deleteGeofence
 
   /** 3.1 "/save", POST method */
   @Api( value = "/save", produces = "application/json")
@@ -138,11 +139,11 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
             onComplete( rv ) {
                case Success(geofences) => complete {
                  println( "geofences by company OK!" )
-                 geofences
+                 ToResponseMarshallable( geofences )
                }
                case Failure(err) => complete {
                  println( s"geofences by company failed!...${err.getMessage}" )
-                 err.getMessage
+                 ToResponseMarshallable( err.getMessage )
                }
             }
           }
@@ -274,28 +275,39 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
     }
   }
 
-/*  /** 3.7 "/delete", DELETE method */
+  /** 3.7 "/delete", DELETE method */
   //delete( realm:String , geofenceId:Int ) : Geofence = ???
   @Api(value = "/delete", produces = "application/json")
-  @Path("/delete")
-  @ApiOperation(value = "Borra objeto geocerca", nickname = "deleteGeofence", httpMethod = "DELETE", response = classOf[DeleteResp])
+  @Path("geofences/delete")
+  @ApiOperation(value = "Borra geocerca", nickname = "deleteGeofence", httpMethod = "DELETE", response = classOf[(String,Long)])
   @ApiImplicitParams(Array(
-    new ApiImplicitParam( name = "body",
-      value = "realm", required = true,
-      dataTypeClass = classOf[DeleteReq], paramType = "body" )
+    new ApiImplicitParam( name = "id",
+      value = "id", required = true,
+      dataTypeClass = classOf[Long], paramType = "query" )
   ))
   @ApiResponses(Array(
     new ApiResponse(code = 500, message = "Internal server error")
   ))
-  def delete =
-  path("delete") {
- /*        entity(as[DeleteReq]) { request =>
-        complete { (geofenceActor ? request).mapTo[DeleteResp] }
-      }*/
-
-  }*/
-
-
+  def deleteGeofence =
+    pathPrefix( "geofences" ) {
+      path("delete") {
+        akka.http.scaladsl.server.Directives.delete {
+          parameters ( "id".as[Option[Long]] ) {
+            id => val rv = geofences.delete( id.get )
+            onComplete( rv ) {
+              case Success( rv  ) => complete{
+                println( s"Delete OK! id: ${rv}" )
+                ToResponseMarshallable( rv )
+              }
+              case Failure( err ) => complete{
+                println( s"Delete Failed... ${err.getMessage}" )
+                ToResponseMarshallable( err )
+              }
+            }
+          }
+        }
+      }
+    }
 
 }
 
