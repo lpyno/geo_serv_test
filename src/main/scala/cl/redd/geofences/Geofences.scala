@@ -9,6 +9,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import cl.redd.discovery.ReddDiscoveryClient
 import cl.redd.objects.ReddJsonProtocol._
+import cl.redd.objects.RequestResponses.GetByCompanyReq
 import cl.redd.objects._
 import cl.tastets.life.objects.ServicesEnum
 import spray.json._
@@ -25,6 +26,7 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
     val url = s"$serviceHost/geofence/save"
     val hds = List(RawHeader("Accept", "application/json"))
     val body = HttpEntity( MediaTypes.`application/json`, newToSaveFormat( geofence ).toJson.toString )
+    println( "save body:" + body )
     val futureHttpResp = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
 
     val rv = futureHttpResp.flatMap{
@@ -53,26 +55,68 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
 
 
   /** 3.3 "/getByCompany", GET method */
-  def getGeofencesByCompanyId( realm:Option[String], companyId:Option[Int], fps:Option[FilterPaginateSort] ) : Future[List[Geofence]] = {
+  def getGeofencesByCompanyId( realm:String, companyId:Int, fps:FilterPaginateSort ) : Future[List[Geofence]] = {
 
-    // filters OK: by name, by alarm
-    val filter = Some( FilterMain( realm , companyId , if (fps.isDefined) fps.get.filterParams else None) )
-    val paginated = if( fps.get.pagLimit.isDefined && fps.get.pagOffset.isDefined )
-                      Some( Map("limit"->fps.get.pagLimit.get,"offset"->fps.get.pagOffset.get) )
-                    else
-                      None
-    val request = GeofGetAllPagNewReq( filter , paginated )
+    // filters supported: 1.by name, 2.by alarm, 3.by id/ignoreIds, 4.by typeId, 5.by userId, 6.by lastUpdateTs (updateDateInit), 7.by bbox, 8.by extraFields
+    // sort params supported: name, maxSpeed, typeId, updateDateInit(lastUpdateTs) [only asc]
+
+    val listFilters = fps.filterParams.map( tuple => s"""{"${tuple._1}":"${tuple._2}"}""" )
+    // request format to /geofence/getAllPaginatedNew
+    val strBody =
+      s"""{"filter":{"realm":"$realm","companyId":$companyId,"filter":[${listFilters.toString.replace("List(","").replace(")","").replace(" ","")}],"sort":"${fps.sortParam}"},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
+        .stripMargin
+    println( s"request string: $strBody" )
+
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
-    val url         = s"$serviceHost/geofence/getAllPaginatedNew"
-    val hds         = List(RawHeader("Accept", "application/json"))
-    val body        = HttpEntity( ContentTypes.`application/json`, request.toJson.toString() )
+    val url = s"$serviceHost/geofence/getAllPaginatedNew"
+    val hds = List(RawHeader("Accept", "application/json"))
+    val body = HttpEntity( ContentTypes.`application/json`, strBody )
 
     val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
 
     future.flatMap {
       case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[GeofenceOld]]
-    }.map( listGf => listGf.map( gf => newFromOld( gf , realm , companyId ) ) )
+    }.map( listGf => listGf.map( gf => newFromOld( gf , Some(realm) , Some(companyId) ) ) )
 
+  }
+
+  def parseRequestParams( request:String ):Option[GetByCompanyReq] = {
+
+    val jsObject = request
+      .parseJson
+      .asJsObject( "Invalid Json")
+
+    val realmJs = jsObject.fields.get("realm")
+    val realm = if (realmJs.isDefined){
+      realmJs.get.convertTo[String]
+    } else { return None }
+  //println( s"realm: $realm " )
+    val companyIdJs = jsObject.fields.get("companyId")
+    val companyId = if (companyIdJs.isDefined){
+      companyIdJs.get.convertTo[Int]
+    } else { return None }
+    //println( s"companyId: $companyId" )
+    val fpsJs = jsObject.fields.get("fps")
+    val fps = if (fpsJs.isDefined){
+      fpsJs.get.convertTo[Map[String,JsValue]]
+    } else { return None }
+    //println( s"fps: $fps" )
+    val filterParamsJs = fps.get("filterParams")
+    val filterParams = if (filterParamsJs.isDefined){
+      filterParamsJs.get.convertTo[Map[String,String]]
+    } else { return None }
+    //println( s"filterFields: $filterParams" )
+
+    Some(
+      GetByCompanyReq( realm, companyId, FilterPaginateSort(
+        filterParams,
+        fps.get("pagLimit").get.convertTo[Int],
+        fps.get("pagOffset").get.convertTo[Int],
+        fps.get("sortOrder").get.convertTo[Int],
+        fps.get("sortParam").get.convertTo[String]
+        )
+      )
+    )
   }
 
   def queryOldGeofences( realm:Option[String], companyId:Option[Int], fps:Option[FilterPaginateSort] ) : Future[HttpResponse] = {
@@ -89,10 +133,10 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
 
   private def constructRequest( realm:Option[String], companyId:Option[Int], fps:Option[FilterPaginateSort] ):Option[GeofGetAllPagNewReq] = {
 
-    if ( realm.isDefined && companyId.isDefined && fps.isDefined && fps.get.pagLimit.isDefined && fps.get.pagOffset.isDefined ){
+    if ( realm.isDefined && companyId.isDefined && fps.isDefined ){
       // filters OK: by name, by alarm
-      val filter = Some( FilterMain( realm , companyId , fps.get.filterParams ) )
-      val paginated = Some( Map( "limit" -> fps.get.pagLimit.get, "offset" -> fps.get.pagOffset.get ) )
+      val filter = Some( FilterMain( realm.get , companyId.get , fps.get.filterParams ) )
+      val paginated = Some( Map( "limit" -> fps.get.pagLimit, "offset" -> fps.get.pagOffset ) )
       Some( GeofGetAllPagNewReq( filter , paginated ) )
     } else {
       println( "Request param undefined..." )

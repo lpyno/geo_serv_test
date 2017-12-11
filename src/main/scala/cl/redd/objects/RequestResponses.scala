@@ -9,7 +9,8 @@ object RequestResponses {
   case class GetByIdReq ( realm:Option[String]=None , geofenceId:Option[Int]=None )
   case class GetByIdResp( geofences:List[Geofence] )
   /** getByCompany */
-  case class GetByCompanyReq ( realm:Option[String]=None, companyId:Option[Int]=None, fps:Option[FilterPaginateSort]=None )
+  case class GetByCompanyReq ( realm:String, companyId:Int, fps:FilterPaginateSort)
+  //case class GetByCompanyReq ( realm:Option[String]=None, companyId:Option[Int]=None, fps:Option[FilterPaginateSort]=None )
   case class GetByCompanyResp( geofences:List[Geofence] )
   /** getFromCompanyByParameter */
   case class GetFromCompanyByParamReq (realm:String , companyId:Int , paramName:String/*Geofence.{param}*/ , paramValue:String , fps:FilterPaginateSort )

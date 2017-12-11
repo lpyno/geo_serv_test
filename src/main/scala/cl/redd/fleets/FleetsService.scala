@@ -54,7 +54,7 @@ class FleetsService( implicit val system:ActorSystem,
       path("getByUser") {
         post {
           entity(as[GetFleetsByUserId]) {
-            request => val fleets:Future[List[Fleet]] = fleetsController.getFleetsByUserId( Some(request) )
+            request => val fleets:Future[List[Fleet]] = fleetsController.getFleetsByUserId( request )
               onComplete( fleets ) {
                 case Success( fleets ) => complete{
                   println(s"getFleetsByUserId OK!")

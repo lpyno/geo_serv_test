@@ -17,7 +17,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-
 @Api(value = "/geofences", produces = "application/json")
 @Path("/")
 class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:ActorMaterializer, implicit val ec:ExecutionContext )
@@ -134,17 +133,25 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
     pathPrefix("geofences"){
       path("getByCompany") {
         post {
-          entity(as[GetByCompanyReq]) {
-            request => val rv: Future[List[Geofence]] = geofences.getGeofencesByCompanyId( request.realm, request.companyId, request.fps )
-            onComplete( rv ) {
+          //entity(as[GetByCompanyReq]) { // fail at runtime
+          entity(as[String]) {
+            request =>
+            val constructedReq:Option[GetByCompanyReq] = geofences.parseRequestParams( request )
+            if( constructedReq.isDefined ){
+              //println( s"constructed request: $constructedReq" )
+              val rv: Future[List[Geofence]] = geofences.getGeofencesByCompanyId( constructedReq.get.realm, constructedReq.get.companyId, constructedReq.get.fps )
+              onComplete( rv ) {
                case Success(geofences) => complete {
-                 println( "geofences by company OK!" )
-                 ToResponseMarshallable( geofences )
-               }
-               case Failure(err) => complete {
-                 println( s"geofences by company failed!...${err.getMessage}" )
-                 ToResponseMarshallable( err.getMessage )
-               }
+                  println( "geofences by company OK!" )
+                  ToResponseMarshallable( geofences )
+                }
+                case Failure(err) => complete {
+                  println( s"geofences by company failed!...${err.getMessage}" )
+                  ToResponseMarshallable( err.getMessage )
+                }
+              }
+            } else {
+              complete( ToResponseMarshallable("RequestParam Undefined...") )
             }
           }
         }

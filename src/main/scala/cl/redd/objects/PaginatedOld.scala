@@ -1,3 +1,3 @@
 package cl.redd.objects
 
-case class PaginatedOld( limit:Option[Int] = None , offset:Option[Int] = None )
+case class PaginatedOld( limit:Int, offset:Int )

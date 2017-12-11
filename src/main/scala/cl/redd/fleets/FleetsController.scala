@@ -48,17 +48,17 @@ class FleetsController( implicit val system : ActorSystem,
     return va
   }
 
-  def getFleetsByUserId(params: Option[GetFleetsByUserId] = None ) : Future[List[Fleet]] = {
+  def getFleetsByUserId( params: GetFleetsByUserId ) : Future[List[Fleet]] = {
 
-    val filterOld = new FilterOld( params.get.fps.get.filterParams , params.get.userId , params.get.userProfile , params.get.companyId )
-    val sortOld = new SortOld( params.get.fps.get.sortParam , params.get.fps.get.sortOrder )
-    val paginatedOld = new PaginatedOld( params.get.fps.get.pagLimit , params.get.fps.get.pagOffset )
-    val reqData = new RequestData( Some(filterOld) , Some(sortOld) , Some(paginatedOld) )
+    val filterOld = FilterOld( params.fps.get.filterParams , params.userId.get , params.userProfile.get , params.companyId.get )
+    val sortOld = SortOld( params.fps.get.sortParam , params.fps.get.sortOrder )
+    val paginatedOld = PaginatedOld( params.fps.get.pagLimit , params.fps.get.pagOffset )
+    val reqData = RequestData( Some(filterOld) , Some(sortOld) , Some(paginatedOld) )
 
     val futListFleets = {
 
       val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )
-      val url = s"$serviceHost/metadata/vehicle/fleet/getMetadataByUser?realm=${params.get.realm.get}"
+      val url = s"$serviceHost/metadata/vehicle/fleet/getMetadataByUser?realm=${params.realm.get}"
       val hds = List(RawHeader("Accept", "application/json"))
       val body = HttpEntity( ContentTypes.`application/json`, reqData.toJson.toString() )
 
@@ -78,8 +78,8 @@ class FleetsController( implicit val system : ActorSystem,
         .map(va => fleet.copy(activity = Some(va)))))
         .flatMap(l => Future.sequence(l))
     }
-    if( params.get.withVehicles.get ) {
-      return fleetsWithActivity.flatMap( list => Future.sequence{ list.map( fleet => getMetadataByFleet( fleet , params.get.withLastState.get ) ) } )
+    if( params.withVehicles.get ) {
+      return fleetsWithActivity.flatMap( list => Future.sequence{ list.map( fleet => getMetadataByFleet( fleet , params.withLastState.get ) ) } )
               //.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } ) )
     } else {
       return fleetsWithActivity//.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } )
