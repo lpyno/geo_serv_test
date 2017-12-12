@@ -10,7 +10,7 @@ import cl.redd.discovery.ReddDiscoveryClient
 import cl.redd.objects.ReddJsonProtocol._
 import cl.redd.objects._
 import cl.tastets.life.objects.ServicesEnum
-import spray.json.pimpAny
+import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -48,43 +48,72 @@ class FleetsController( implicit val system : ActorSystem,
     return va
   }
 
-  def getFleetsByUserId( params: GetFleetsByUserId ) : Future[List[Fleet]] = {
+  def getReqParamsFleetsByUser( request:String ):Option[GetFleetsByUserId] = {
 
-    val filterOld = FilterOld( params.fps.get.filterParams , params.userId.get , params.userProfile.get , params.companyId.get )
-    val sortOld = SortOld( params.fps.get.sortParam , params.fps.get.sortOrder )
-    val paginatedOld = PaginatedOld( params.fps.get.pagLimit , params.fps.get.pagOffset )
-    val reqData = RequestData( Some(filterOld) , Some(sortOld) , Some(paginatedOld) )
+    val jsObject = request
+      .parseJson
+      .asJsObject( "Invalid Json" )
 
-    val futListFleets = {
+    val realmJs = jsObject.fields.get("realm")
+    val realm = if (realmJs.isDefined){
+      realmJs.get.convertTo[String]
+    } else { return None }
+    println( s"realm: $realm " )
 
-      val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )
-      val url = s"$serviceHost/metadata/vehicle/fleet/getMetadataByUser?realm=${params.realm.get}"
-      val hds = List(RawHeader("Accept", "application/json"))
-      val body = HttpEntity( ContentTypes.`application/json`, reqData.toJson.toString() )
+    val userIdJs = jsObject.fields.get("userId")
+    val userId = if (userIdJs.isDefined){
+      userIdJs.get.convertTo[Int]
+    } else { return None }
+    println( s"userId: $userId" )
 
-      val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
+    val companyIdJs = jsObject.fields.get("companyId")
+    val companyId = if (companyIdJs.isDefined){
+      companyIdJs.get.convertTo[Int]
+    } else { return None }
+    println( s"companyId: $companyId" )
 
-      future.flatMap {
-        case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[FleetOld]]
-      }
+    val userProfileJs = jsObject.fields.get("userProfile")
+    val userProfile = if (userProfileJs.isDefined){
+      userProfileJs.get.convertTo[String]
+    } else { return None }
+    println( s"userProfile: $userProfile" )
 
-    }.flatMap( list => Future { list.map( fleet => fleetOldToNew( fleet ) ) } )
-      .map( l => l.filter( f => f.realm.isDefined     &&
-                                f.id.isDefined        &&
-                                f.companyId.isDefined &&
-                                ( f.defaultFleet.isEmpty || f.defaultFleet.get != 1 ) ) )
-    val fleetsWithActivity = {
-      futListFleets.map(list => list.map(fleet => getFleetStatus(fleet.realm.get, fleet.id.get)
-        .map(va => fleet.copy(activity = Some(va)))))
-        .flatMap(l => Future.sequence(l))
-    }
-    if( params.withVehicles.get ) {
-      return fleetsWithActivity.flatMap( list => Future.sequence{ list.map( fleet => getMetadataByFleet( fleet , params.withLastState.get ) ) } )
-              //.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } ) )
-    } else {
-      return fleetsWithActivity//.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } )
-    }
+    val wVehiclesJs = jsObject.fields.get("withVehicles")
+    val wVehicles = if (wVehiclesJs.isDefined){
+      wVehiclesJs.get.convertTo[Boolean]
+    } else { return None }
+    println( s"wVehicles: $wVehicles" )
+
+    val wLastStateJs = jsObject.fields.get("withLastState")
+    val wLastState = if (wLastStateJs.isDefined){
+      wLastStateJs.get.convertTo[Boolean]
+    } else { return None }
+    println( s"wLastState: $wLastState" )
+
+    val fpsJs = jsObject.fields.get("fps")
+    val fps = if (fpsJs.isDefined){
+      fpsJs.get.convertTo[Map[String,JsValue]]
+    } else { return None }
+    println( s"fps: $fps" )
+
+    val filterParamsJs = fps.get("filterParams")
+    val filterParams = if (filterParamsJs.isDefined){
+      filterParamsJs.get.convertTo[Map[String,String]]
+    } else { return None }
+    println( s"filterFields: $filterParams" )
+
+    Some(
+      GetFleetsByUserId( realm, userId, companyId, userProfile, wVehicles, wLastState, FilterPaginateSort(
+        filterParams,
+        fps.get("pagLimit").get.convertTo[Int],
+        fps.get("pagOffset").get.convertTo[Int],
+        fps.get("sortOrder").get.convertTo[Int],
+        fps.get("sortParam").get.convertTo[String]
+      )
+      )
+    )
   }
+
 
   private def getMetadataByFleet( fleet:Fleet , withLastState:Boolean ):Future[Fleet] = {
 
@@ -150,4 +179,48 @@ class FleetsController( implicit val system : ActorSystem,
     )
   }
 
+
+  //def getFleetsByUserId( request: GetFleetsByUserId ) : Future[List[Fleet]] = {
+  def getFleetsByUserId( realm:String, userId:Int, userProfile:String, companyId:Int, withVehicles:Boolean, withLastState:Boolean, fps:FilterPaginateSort ) : Future[List[Fleet]] = {
+
+    // supported filter fields: id, name, companyId, generateReport
+    val filtersList = fps
+      .filterParams
+      .map( tuple => s"""{"${tuple._1}":"${tuple._2}"}""" )
+      .toString().replace("List(","").replace(")","").replace(" ","")
+    println( s"filtersList: $filtersList" )
+    // {"filter":{"filter":[],"userId":2363,"userProfile":"ADMIN","companyId":144,"sort":"name"},"paginated":{"limit":5,"offset":0}}
+    val strBody = s"""{"filter":{"filter":[$filtersList],"userId":$userId,"userProfile":"$userProfile","companyId":$companyId,"sort":"${fps.sortParam}"},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
+      .stripMargin
+    println( s"strBody: $strBody" )
+    val futListFleets = {
+
+      val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )
+      val url = s"$serviceHost/metadata/vehicle/fleet/getMetadataByUser?realm=$realm"
+      val hds = List(RawHeader("Accept", "application/json"))
+      val body = HttpEntity( ContentTypes.`application/json`, strBody )
+
+      val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
+
+      future.flatMap {
+        case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[FleetOld]]
+      }
+
+    }.flatMap( list => Future { list.map( fleet => fleetOldToNew( fleet ) ) } )
+      .map( l => l.filter( f => f.realm.isDefined     &&
+        f.id.isDefined        &&
+        f.companyId.isDefined &&
+        ( f.defaultFleet.isEmpty || f.defaultFleet.get != 1 ) ) )
+    val fleetsWithActivity = {
+      futListFleets.map(list => list.map(fleet => getFleetStatus(fleet.realm.get, fleet.id.get)
+        .map(va => fleet.copy(activity = Some(va)))))
+        .flatMap(l => Future.sequence(l))
+    }
+    if( withVehicles ) {
+      return fleetsWithActivity.flatMap( list => Future.sequence{ list.map( fleet => getMetadataByFleet( fleet , withLastState ) ) } )
+      //.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } ) )
+    } else {
+      return fleetsWithActivity//.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } )
+    }
+  }
 }

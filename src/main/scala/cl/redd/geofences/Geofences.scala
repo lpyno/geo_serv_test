@@ -60,12 +60,19 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
     // filters supported: 1.by name, 2.by alarm, 3.by id/ignoreIds, 4.by typeId, 5.by userId, 6.by lastUpdateTs (updateDateInit), 7.by bbox, 8.by extraFields
     // sort params supported: name, maxSpeed, typeId, updateDateInit(lastUpdateTs) [only asc]
 
-    val listFilters = fps.filterParams.map( tuple => s"""{"${tuple._1}":"${tuple._2}"}""" )
+    val listFilters = fps.filterParams
+      .map( tuple => s"""{"${tuple._1}":"${tuple._2}"}""" )
+      .toString
+      .replace("List(","")
+      .replace(")","")
+      .replace(" ","")
+    println( s"filterList: $listFilters" )
+
     // request format to /geofence/getAllPaginatedNew
     val strBody =
-      s"""{"filter":{"realm":"$realm","companyId":$companyId,"filter":[${listFilters.toString.replace("List(","").replace(")","").replace(" ","")}],"sort":"${fps.sortParam}"},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
+      s"""{"filter":{"realm":"$realm","companyId":$companyId,"filter":[$listFilters],"sort":"${fps.sortParam}"},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
         .stripMargin
-    println( s"request string: $strBody" )
+    println( s"strBody: $strBody" )
 
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
     val url = s"$serviceHost/geofence/getAllPaginatedNew"
@@ -90,22 +97,22 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
     val realm = if (realmJs.isDefined){
       realmJs.get.convertTo[String]
     } else { return None }
-  //println( s"realm: $realm " )
+    println( s"realm: $realm " )
     val companyIdJs = jsObject.fields.get("companyId")
     val companyId = if (companyIdJs.isDefined){
       companyIdJs.get.convertTo[Int]
     } else { return None }
-    //println( s"companyId: $companyId" )
+    println( s"companyId: $companyId" )
     val fpsJs = jsObject.fields.get("fps")
     val fps = if (fpsJs.isDefined){
       fpsJs.get.convertTo[Map[String,JsValue]]
     } else { return None }
-    //println( s"fps: $fps" )
+    println( s"fps: $fps" )
     val filterParamsJs = fps.get("filterParams")
     val filterParams = if (filterParamsJs.isDefined){
       filterParamsJs.get.convertTo[Map[String,String]]
     } else { return None }
-    //println( s"filterFields: $filterParams" )
+    println( s"filterFields: $filterParams" )
 
     Some(
       GetByCompanyReq( realm, companyId, FilterPaginateSort(

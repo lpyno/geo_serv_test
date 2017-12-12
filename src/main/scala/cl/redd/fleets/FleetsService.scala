@@ -3,16 +3,17 @@ package cl.redd.fleets
 import javax.ws.rs.Path
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import cl.redd.objects.ReddJsonProtocol._
 import cl.redd.objects._
 import io.swagger.annotations._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
+import cl.redd.objects.ReddJsonProtocol._
 
 @Api(value = "/fleets", produces = "application/json")
 @Path("/")
@@ -53,17 +54,29 @@ class FleetsService( implicit val system:ActorSystem,
     pathPrefix("fleets") {
       path("getByUser") {
         post {
-          entity(as[GetFleetsByUserId]) {
-            request => val fleets:Future[List[Fleet]] = fleetsController.getFleetsByUserId( request )
-              onComplete( fleets ) {
-                case Success( fleets ) => complete{
-                  println(s"getFleetsByUserId OK!")
-                  fleets
+          //entity(as[GetFleetsByUserId]) {
+          entity(as[String]) {
+            request =>
+              println( s"request str $request" )
+              val reqObj:Option[GetFleetsByUserId] = fleetsController.getReqParamsFleetsByUser( request )
+              println( s"constructed request $reqObj" )
+              if ( reqObj.isDefined ) {
+                val fleets:Future[List[Fleet]] =
+                  fleetsController.getFleetsByUserId( reqObj.get.realm, reqObj.get.userId, reqObj.get.userProfile,
+                    reqObj.get.companyId, reqObj.get.withVehicles, reqObj.get.withLastState, reqObj.get.fps)
+                //val fleets = Future( List( Fleet() ) )
+                onComplete( fleets ) {
+                  case Success( fleets ) => complete{
+                    println(s"getFleetsByUserId OK!")
+                    ToResponseMarshallable( fleets )
+                  }
+                  case Failure( err ) => complete{
+                    print(s"getFleetsByUserId Failed!...${err.getMessage}")
+                    ToResponseMarshallable( err )
+                  }
                 }
-                case Failure( err ) => complete{
-                  print(s"getFleetsByUserId Failed!...${err.getMessage}")
-                  err
-                }
+              } else {
+                complete( ToResponseMarshallable("RequestParam Undefined...") )
               }
             }
           }
