@@ -68,7 +68,7 @@ class AuthenticationController( implicit val actor:ActorSystem, implicit val mat
       } else {
 
         println( "Empty parameter!..." )
-        new UserInfo //
+        UserInfo() //
 
       }
 

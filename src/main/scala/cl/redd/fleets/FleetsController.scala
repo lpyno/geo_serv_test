@@ -58,49 +58,41 @@ class FleetsController( implicit val system : ActorSystem,
     val realm = if (realmJs.isDefined){
       realmJs.get.convertTo[String]
     } else { return None }
-    println( s"realm: $realm " )
 
     val userIdJs = jsObject.fields.get("userId")
     val userId = if (userIdJs.isDefined){
       userIdJs.get.convertTo[Int]
     } else { return None }
-    println( s"userId: $userId" )
 
     val companyIdJs = jsObject.fields.get("companyId")
     val companyId = if (companyIdJs.isDefined){
       companyIdJs.get.convertTo[Int]
     } else { return None }
-    println( s"companyId: $companyId" )
 
     val userProfileJs = jsObject.fields.get("userProfile")
     val userProfile = if (userProfileJs.isDefined){
       userProfileJs.get.convertTo[String]
     } else { return None }
-    println( s"userProfile: $userProfile" )
 
     val wVehiclesJs = jsObject.fields.get("withVehicles")
     val wVehicles = if (wVehiclesJs.isDefined){
       wVehiclesJs.get.convertTo[Boolean]
     } else { return None }
-    println( s"wVehicles: $wVehicles" )
 
     val wLastStateJs = jsObject.fields.get("withLastState")
     val wLastState = if (wLastStateJs.isDefined){
       wLastStateJs.get.convertTo[Boolean]
     } else { return None }
-    println( s"wLastState: $wLastState" )
 
     val fpsJs = jsObject.fields.get("fps")
     val fps = if (fpsJs.isDefined){
       fpsJs.get.convertTo[Map[String,JsValue]]
     } else { return None }
-    println( s"fps: $fps" )
 
     val filterParamsJs = fps.get("filterParams")
     val filterParams = if (filterParamsJs.isDefined){
       filterParamsJs.get.convertTo[Map[String,String]]
     } else { return None }
-    println( s"filterFields: $filterParams" )
 
     Some(
       GetFleetsByUserId( realm, userId, companyId, userProfile, wVehicles, wLastState, FilterPaginateSort(
@@ -157,7 +149,7 @@ class FleetsController( implicit val system : ActorSystem,
       id                = if( vo.vehicleId.isDefined ) vo.vehicleId else None,
       name              = if( vo.name.isDefined ) vo.name else None,
       /*activityStatus,*/
-      companyId         = if( vo.companyId.isDefined ) vo.companyId else None,
+      //companyId         = if( vo.companyId.isDefined ) vo.companyId else None,
       /*rutCompany*/
       vin               = if( vo.vin.isDefined ) vo.vin else None,
       plateNumber       = if( vo.plateNumber.isDefined ) vo.plateNumber else None,
@@ -188,11 +180,10 @@ class FleetsController( implicit val system : ActorSystem,
       .filterParams
       .map( tuple => s"""{"${tuple._1}":"${tuple._2}"}""" )
       .toString().replace("List(","").replace(")","").replace(" ","")
-    println( s"filtersList: $filtersList" )
     // {"filter":{"filter":[],"userId":2363,"userProfile":"ADMIN","companyId":144,"sort":"name"},"paginated":{"limit":5,"offset":0}}
     val strBody = s"""{"filter":{"filter":[$filtersList],"userId":$userId,"userProfile":"$userProfile","companyId":$companyId,"sort":"${fps.sortParam}"},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
       .stripMargin
-    println( s"strBody: $strBody" )
+
     val futListFleets = {
 
       val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )

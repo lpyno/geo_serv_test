@@ -6,14 +6,12 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
-import akka.util.Timeout
+import cl.redd.objects.ReddJsonProtocol._
 import cl.redd.objects._
 import io.swagger.annotations._
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import cl.redd.objects.ReddJsonProtocol._
 
 @Api(value = "/fleets", produces = "application/json")
 @Path("/")
@@ -21,8 +19,6 @@ class FleetsService( implicit val system:ActorSystem,
                      implicit val materializer: ActorMaterializer,
                      implicit val ec:ExecutionContext ) extends Directives {
 
-
-  implicit val timeout = Timeout(5.seconds)
 
   val fleetsController:FleetsController = new FleetsController()
 
@@ -57,9 +53,7 @@ class FleetsService( implicit val system:ActorSystem,
           //entity(as[GetFleetsByUserId]) {
           entity(as[String]) {
             request =>
-              println( s"request str $request" )
               val reqObj:Option[GetFleetsByUserId] = fleetsController.getReqParamsFleetsByUser( request )
-              println( s"constructed request $reqObj" )
               if ( reqObj.isDefined ) {
                 val fleets:Future[List[Fleet]] =
                   fleetsController.getFleetsByUserId( reqObj.get.realm, reqObj.get.userId, reqObj.get.userProfile,
@@ -67,7 +61,7 @@ class FleetsService( implicit val system:ActorSystem,
                 //val fleets = Future( List( Fleet() ) )
                 onComplete( fleets ) {
                   case Success( fleets ) => complete{
-                    println(s"getFleetsByUserId OK!")
+                    println(s"Fleets getByUser OK!... listSize[${fleets.size}]")
                     ToResponseMarshallable( fleets )
                   }
                   case Failure( err ) => complete{

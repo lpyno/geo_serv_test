@@ -2,14 +2,14 @@ package cl.redd.objects
 
 case class GeofenceOld (
 
-                         id		                   : Option[Long]     = None, //*
+                         id		                   : Option[Long]    = None, //*
                          name		                 : Option[String]  = None, //*
                          buffer	                 : Option[Int]     = None, //*
                          lastUpdateTs            : Option[Long]    = None,
                          alarm		               : Option[Boolean] = None, //*
                          latitude	               : Option[Double]  = None, //*
                          colour                  : Option[String]  = None,
-                         userId                  : Option[Long]     = None,
+                         userId                  : Option[Long]    = None,
                          longitude	             : Option[Double]  = None, //*
                          total		               : Option[Int]     = None, //*
                          typeId	                 : Option[Int]     = None, //*

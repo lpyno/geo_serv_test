@@ -62,7 +62,7 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   implicit val vehicleFirstBLockFormat = jsonFormat21( VehicleFirstBlock )
   implicit val lastStateFormat = jsonFormat12( LastState )
   implicit val vehicleLastBlockFormat  = jsonFormat3( VehicleLastBlock )
-  implicit val vehicleFormat = jsonFormat22( Vehicle )
+  implicit val vehicleFormat = jsonFormat21( Vehicle )
   implicit val lastStateOldFormat = jsonFormat15( LastStateOld )
   implicit val vehicleOldFormat = jsonFormat19( VehicleOld )
   implicit val getVehiclesByIdFormat = jsonFormat4( GetVehiclesById )
@@ -82,4 +82,7 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   implicit val filterMainFormat = jsonFormat3( FilterMain )
   implicit val geofGetAllPagNewReqFormat = jsonFormat2( GeofGetAllPagNewReq )
   implicit val geofenceToSaveFormat = jsonFormat11( GeofenceToSave )
+  /** vehicles */
+  implicit val vehicleFromGetByUserFormat = jsonFormat22( VehicleFromGetByUser )
+
 }

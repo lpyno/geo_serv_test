@@ -26,4 +26,7 @@ object RequestResponses {
   case class DeleteResp( geofence:Geofence )
   /** login */
 
+  /** vehicles */
+  case class GetVehiclesByUserId ( realm:String, companyId:Int, withLastState:Boolean, fps:FilterPaginateSort )
+
 }

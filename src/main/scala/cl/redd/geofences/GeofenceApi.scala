@@ -60,11 +60,11 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
             onComplete( resp ) {
               case Success( resp ) => complete {
                 println( "Saved OK!..." )
-                resp
+                ToResponseMarshallable( resp )
               }
               case Failure( err ) => complete {
                 println( s"Save Failed... $err" )
-                err
+                ToResponseMarshallable( err )
               }
             }
           }
@@ -102,11 +102,11 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
             onComplete(geofence) {
               case Success(geofence) => complete {
                 println("getById OK!")
-                geofence
+                ToResponseMarshallable( geofence )
               }
               case Failure(err) => complete {
                 println(s"getById failed... ${err.getMessage}")
-                err
+                ToResponseMarshallable( err )
               }
             }
           }
@@ -133,7 +133,6 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
     pathPrefix("geofences"){
       path("getByCompany") {
         post {
-          //entity(as[GetByCompanyReq]) { // fail at runtime
           entity(as[String]) {
             request =>
             val constructedReq:Option[GetByCompanyReq] = geofences.parseRequestParams( request )
@@ -142,11 +141,11 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
               val rv: Future[List[Geofence]] = geofences.getGeofencesByCompanyId( constructedReq.get.realm, constructedReq.get.companyId, constructedReq.get.fps )
               onComplete( rv ) {
                case Success(geofences) => complete {
-                  println( "geofences by company OK!" )
+                  println( s"Geofences by company OK!... listSize[${geofences.size}]" )
                   ToResponseMarshallable( geofences )
                 }
                 case Failure(err) => complete {
-                  println( s"geofences by company failed!...${err.getMessage}" )
+                  println( s"Geofences by company failed!...${err.getMessage}" )
                   ToResponseMarshallable( err.getMessage )
                 }
               }
@@ -299,7 +298,9 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
     pathPrefix( "geofences" ) {
       path("delete") {
         akka.http.scaladsl.server.Directives.delete {
+          println( s"route found..." )
           parameters ( "id".as[Option[Long]] ) {
+            println( s"in delete..." )
             id => val rv = geofences.delete( id.get )
             onComplete( rv ) {
               case Success( rv  ) => complete{
