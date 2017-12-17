@@ -67,11 +67,9 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
       .replace(")","")
       .replace(" ","")
 
-    // request format to /geofence/getAllPaginatedNew
     val strBody =
       s"""{"filter":{"realm":"$realm","companyId":$companyId,"filter":[$listFilters],"sort":"${fps.sortParam}"},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
         .stripMargin
-    println( s"strBody: $strBody" )
 
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.GEOFENCE.toString )
     val url = s"$serviceHost/geofence/getAllPaginatedNew"

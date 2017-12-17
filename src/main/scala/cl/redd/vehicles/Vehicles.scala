@@ -140,14 +140,22 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString() )
     val url = s"$serviceHost/metadata/vehicle/getVehiclesByUser?realm=$realm&companyId=$companyId&lastState=$withLastState"
     val hds = List(RawHeader("Accept", "application/json"))
+    val isAdmin = fps.filterParams.get("userProfile").get.equalsIgnoreCase( "ADMIN" )
     val strBody =
-      s"""{"filter":{"userProfile":"${fps.filterParams.get("userProfile").get}","userId":"${fps.filterParams.get("userId").get}"},"sort":{"field":"${fps.sortParam}", "order":${fps.sortOrder}},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
+      s"""{"filter":{"userProfile":"${fps.filterParams.get("userProfile").get}","userId":${fps.filterParams.get("userId").get}},"sort":{"field":"${fps.sortParam}", "order":${fps.sortOrder}},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
         .stripMargin
     val body = HttpEntity( MediaTypes.`application/json`, strBody )
     val futHttpResp = Http().singleRequest( HttpRequest( HttpMethods.POST, url, hds, body ) )
 
     val rv = futHttpResp.flatMap{
-      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[VehicleFromGetByUser]]
+      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => {
+        if ( isAdmin ){
+          Unmarshal(entity).to[List[VehicleFromGetByUserAdmin]]
+        } else{
+          // change status field from boolean to int to match the admin vehicle format
+          Unmarshal(entity).to[List[VehicleFromGetByUser]].map( list => list.map( v => statusToAdminFormat( v )))
+        }
+      }
     }.map( list => list.map( v => newFromGetByUser( v ) ) )
       .map( list => list.map( v => getActivityStatus( v ) ) )
     rv
@@ -181,7 +189,40 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
     )
   }
 
-  def newFromGetByUser( vo:VehicleFromGetByUser ): Vehicle = {
+  def statusToAdminFormat( v:VehicleFromGetByUser ):VehicleFromGetByUserAdmin = {
+
+    VehicleFromGetByUserAdmin(
+      company     = v.company,
+      idCompany   = v.idCompany,
+      rut_Company = v.rut_Company,
+      vehicleId   = v.vehicleId,
+      vin         = v.vin,
+      plateNumber = v.plateNumber,
+      //plate_number: Option[String] = None,
+      name        = v.name,
+      engineTypeId    = v.engineTypeId,
+      subVehicleTypeId= v.subVehicleTypeId,
+      createDate      = v.createDate,
+      validateDate    = v.validateDate,
+      dischargeDate   = v.dischargeDate,
+      lastActivityDate = v.lastActivityDate,
+      status      = if ( v.status.get ) Some(1) else Some(0),
+      extraFields = v.extraFields,
+      _m          = v._m,
+      deviceTypeId = v.deviceTypeId,
+      simcard     = v.simcard,
+      //engineTypeName: Option[String] = None,
+      deviceTypeName = v.deviceTypeName,
+      //subVehicleTypeName: Option[String] = None,
+      //vehicleTypeName: Option[String] = None,
+      total = v.total,
+      realm = v.realm,
+      lastState = v.lastState
+    )
+
+  }
+
+  def newFromGetByUser( vo:VehicleFromGetByUserAdmin ): Vehicle = {
 
     Vehicle (
       id                = if( vo.vehicleId.isDefined ) vo.vehicleId else None,

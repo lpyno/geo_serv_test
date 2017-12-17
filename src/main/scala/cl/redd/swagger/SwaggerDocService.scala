@@ -1,7 +1,7 @@
 package cl.redd.swagger
 
-import cl.redd.auth.AuthenticationService
-import cl.redd.fleets.FleetsService
+import cl.redd.auth.AuthApi
+import cl.redd.fleets.FleetsApi
 import com.github.swagger.akka.SwaggerHttpService
 import com.github.swagger.akka.model.Info
 import cl.redd.geofences.GeofenceApi
@@ -11,9 +11,9 @@ import io.swagger.models.auth.BasicAuthDefinition
 
 object SwaggerDocService extends SwaggerHttpService {
 
-  override val apiClasses = Set( classOf[GeofenceApi] , classOf[AuthenticationService] , classOf[VehiclesApi] , classOf[FleetsService] )
+  override val apiClasses = Set( classOf[GeofenceApi] , classOf[AuthApi] , classOf[VehiclesApi] , classOf[FleetsApi] )
   override val info = Info( version = "0.0.1",
-                            title = "[Auth - Vehicles - Fleets] Service" )
+                            title = "[Auth - Vehicles - Fleets - Geofence] Service" )
   override val host = "localhost:12345"
   override val basePath = "/"
   override val externalDocs = Some(new ExternalDocs("Core Docs", "http://acme.com/docs"))

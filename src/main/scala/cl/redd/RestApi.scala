@@ -5,11 +5,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.RouteConcatenation
 import akka.stream.ActorMaterializer
 import ch.megard.akka.http.cors.scaladsl.CorsDirectives.cors
-import cl.redd.auth.AuthenticationService
-import cl.redd.geofences._
+import cl.redd.auth.AuthApi
+import cl.redd.geofences.GeofenceApi
 import cl.redd.swagger.SwaggerDocService
 import cl.redd.discovery.ReddDiscoveryClient
-import cl.redd.fleets.FleetsService
+import cl.redd.fleets.FleetsApi
 import cl.redd.vehicles.VehiclesApi
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 
@@ -27,9 +27,9 @@ object RestApi extends App with RouteConcatenation with SprayJsonSupport {
   val routes =
     cors() (
       new GeofenceApi().route ~
-      new AuthenticationService().route ~
+      new AuthApi().route ~
       new VehiclesApi().route ~
-      new FleetsService().route ~
+      new FleetsApi().route ~
       SwaggerDocService.routes
     )
 

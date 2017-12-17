@@ -134,6 +134,7 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
       path("getByCompany") {
         post {
           entity(as[String]) {
+            val startTs = System.currentTimeMillis()
             request =>
             val constructedReq:Option[GetByCompanyReq] = geofences.parseRequestParams( request )
             if( constructedReq.isDefined ){
@@ -141,7 +142,9 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
               val rv: Future[List[Geofence]] = geofences.getGeofencesByCompanyId( constructedReq.get.realm, constructedReq.get.companyId, constructedReq.get.fps )
               onComplete( rv ) {
                case Success(geofences) => complete {
-                  println( s"Geofences by company OK!... listSize[${geofences.size}]" )
+                 println(s"Geofences getByCompanyId() completed!...")
+                 println(s"listSize:    [${geofences.size}]")
+                 println(s"elapsed:     [${System.currentTimeMillis() - startTs} ms]")
                   ToResponseMarshallable( geofences )
                 }
                 case Failure(err) => complete {

@@ -15,12 +15,12 @@ import scala.util.{Failure, Success}
 
 @Api(value = "/fleets", produces = "application/json")
 @Path("/")
-class FleetsService( implicit val system:ActorSystem,
+class FleetsApi( implicit val system:ActorSystem,
                      implicit val materializer: ActorMaterializer,
                      implicit val ec:ExecutionContext ) extends Directives {
 
 
-  val fleetsController:FleetsController = new FleetsController()
+  val fleets:Fleets = new Fleets()
 
   val route = getByUser
               //save ~
@@ -50,18 +50,22 @@ class FleetsService( implicit val system:ActorSystem,
     pathPrefix("fleets") {
       path("getByUser") {
         post {
-          //entity(as[GetFleetsByUserId]) {
           entity(as[String]) {
             request =>
-              val reqObj:Option[GetFleetsByUserId] = fleetsController.getReqParamsFleetsByUser( request )
+              val startTs = System.currentTimeMillis()
+              val reqObj:Option[GetFleetsByUserId] = fleets.getReqParamsFleetsByUser( request )
               if ( reqObj.isDefined ) {
-                val fleets:Future[List[Fleet]] =
-                  fleetsController.getFleetsByUserId( reqObj.get.realm, reqObj.get.userId, reqObj.get.userProfile,
+                val fleetList:Future[List[Fleet]] =
+                  fleets.getFleetsByUserId( reqObj.get.realm, reqObj.get.userId, reqObj.get.userProfile,
                     reqObj.get.companyId, reqObj.get.withVehicles, reqObj.get.withLastState, reqObj.get.fps)
-                //val fleets = Future( List( Fleet() ) )
-                onComplete( fleets ) {
+                onComplete( fleetList ) {
                   case Success( fleets ) => complete{
-                    println(s"Fleets getByUser OK!... listSize[${fleets.size}]")
+                    println(s"Fleets getByUserId() completed!...")
+                    println(s"userProfile: [${reqObj.get.userProfile}]")
+                    println(s"w/Vehicles : [${reqObj.get.withVehicles}]")
+                    println(s"w/LastState: [${reqObj.get.withLastState}]")
+                    println(s"listSize   : [${fleets.size}]")
+                    println(s"elapsed    : [${System.currentTimeMillis() - startTs} ms]")
                     ToResponseMarshallable( fleets )
                   }
                   case Failure( err ) => complete{

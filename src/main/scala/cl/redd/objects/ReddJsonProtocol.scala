@@ -84,5 +84,6 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   implicit val geofenceToSaveFormat = jsonFormat11( GeofenceToSave )
   /** vehicles */
   implicit val vehicleFromGetByUserFormat = jsonFormat22( VehicleFromGetByUser )
+  implicit val vehicleFromGetByUserAdminFormat = jsonFormat22( VehicleFromGetByUserAdmin )
 
 }

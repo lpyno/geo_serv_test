@@ -170,19 +170,20 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
       path("getByUserId"){
         post{
           entity(as[String]){
-            request => //println( s"entity as str: $request" )
-              val params = vehicles.parseGetByUserParams( request )
-              //println( s"after parse: $params" )
+            val startTs = System.currentTimeMillis()
+            request => val params = vehicles.parseGetByUserParams( request )
               if( params.isDefined ){
                 val vehiclesList: Future[List[Vehicle]] = vehicles.getByUserId( params.get.realm, params.get.companyId, params.get.withLastState, params.get.fps )
-                //val vehiclesList = Future( List( Vehicle() ) )
                 onComplete(vehiclesList) {
                   case Success(vehiclesList) => complete {
-                    println(s"Vehicles getByUserId OK!... userProfile:${params.get.fps.filterParams.get( "userProfile" ).get},listSize[${vehiclesList.size}]")
+                    println(s"Vehicles getByUserId() completed!...")
+                    println(s"userProfile: [${params.get.fps.filterParams.get( "userProfile" ).get}]")
+                    println(s"listSize:    [${vehiclesList.size}]")
+                    println(s"elapsed:     [${System.currentTimeMillis() - startTs} ms]")
                     ToResponseMarshallable( vehiclesList )
                   }
                   case Failure(err) => complete {
-                    println(s"getByUserId failed... ${err.getMessage}")
+                    println(s"Vehicles getByUserId failed... ${err.getMessage}")
                     ToResponseMarshallable( err )
                   }
                 }

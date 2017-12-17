@@ -14,7 +14,7 @@ import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FleetsController( implicit val system : ActorSystem,
+class Fleets( implicit val system : ActorSystem,
                         implicit val materializer : ActorMaterializer,
                         implicit val ec : ExecutionContext ){
 
@@ -172,7 +172,6 @@ class FleetsController( implicit val system : ActorSystem,
   }
 
 
-  //def getFleetsByUserId( request: GetFleetsByUserId ) : Future[List[Fleet]] = {
   def getFleetsByUserId( realm:String, userId:Int, userProfile:String, companyId:Int, withVehicles:Boolean, withLastState:Boolean, fps:FilterPaginateSort ) : Future[List[Fleet]] = {
 
     // supported filter fields: id, name, companyId, generateReport
@@ -180,7 +179,6 @@ class FleetsController( implicit val system : ActorSystem,
       .filterParams
       .map( tuple => s"""{"${tuple._1}":"${tuple._2}"}""" )
       .toString().replace("List(","").replace(")","").replace(" ","")
-    // {"filter":{"filter":[],"userId":2363,"userProfile":"ADMIN","companyId":144,"sort":"name"},"paginated":{"limit":5,"offset":0}}
     val strBody = s"""{"filter":{"filter":[$filtersList],"userId":$userId,"userProfile":"$userProfile","companyId":$companyId,"sort":"${fps.sortParam}"},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
       .stripMargin
 
@@ -192,21 +190,21 @@ class FleetsController( implicit val system : ActorSystem,
       val body = HttpEntity( ContentTypes.`application/json`, strBody )
 
       val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
-
       future.flatMap {
         case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[FleetOld]]
       }
-
     }.flatMap( list => Future { list.map( fleet => fleetOldToNew( fleet ) ) } )
-      .map( l => l.filter( f => f.realm.isDefined     &&
-        f.id.isDefined        &&
-        f.companyId.isDefined &&
-        ( f.defaultFleet.isEmpty || f.defaultFleet.get != 1 ) ) )
+      .map( l => l.filter( f => f.realm.isDefined
+        && f.id.isDefined
+        && f.companyId.isDefined
+        && ( f.defaultFleet.isEmpty || f.defaultFleet.get != 1 ) ) )
+
     val fleetsWithActivity = {
       futListFleets.map(list => list.map(fleet => getFleetStatus(fleet.realm.get, fleet.id.get)
         .map(va => fleet.copy(activity = Some(va)))))
         .flatMap(l => Future.sequence(l))
     }
+
     if( withVehicles ) {
       return fleetsWithActivity.flatMap( list => Future.sequence{ list.map( fleet => getMetadataByFleet( fleet , withLastState ) ) } )
       //.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } ) )
