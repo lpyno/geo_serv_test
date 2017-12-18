@@ -189,15 +189,19 @@ class Fleets( implicit val system : ActorSystem,
       val hds = List(RawHeader("Accept", "application/json"))
       val body = HttpEntity( ContentTypes.`application/json`, strBody )
 
-      val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
-      future.flatMap {
+      val futureResp:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
+      futureResp.flatMap {
         case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[FleetOld]]
       }
-    }.flatMap( list => Future { list.map( fleet => fleetOldToNew( fleet ) ) } )
-      .map( l => l.filter( f => f.realm.isDefined
+    }.flatMap( list => Future {
+      list.map( fleet => fleetOldToNew( fleet ) )
+    } ).map( l => l.filter(
+        f => f.realm.isDefined
         && f.id.isDefined
         && f.companyId.isDefined
-        && ( f.defaultFleet.isEmpty || f.defaultFleet.get != 1 ) ) )
+        && ( f.defaultFleet.isEmpty || f.defaultFleet.get != 1 )
+      )
+    )
 
     val fleetsWithActivity = {
       futListFleets.map(list => list.map(fleet => getFleetStatus(fleet.realm.get, fleet.id.get)

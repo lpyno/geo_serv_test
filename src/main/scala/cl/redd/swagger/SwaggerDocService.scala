@@ -12,7 +12,7 @@ import io.swagger.models.auth.BasicAuthDefinition
 object SwaggerDocService extends SwaggerHttpService {
 
   override val apiClasses = Set( classOf[GeofenceApi] , classOf[AuthApi] , classOf[VehiclesApi] , classOf[FleetsApi] )
-  override val info = Info( version = "0.0.1",
+  override val info = Info( version = "0.0.6",
                             title = "[Auth - Vehicles - Fleets - Geofence] Service" )
   override val host = "localhost:12345"
   override val basePath = "/"

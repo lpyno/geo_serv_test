@@ -21,49 +21,16 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
 
   /** 4.1 "/save", POST method */
 
-  def save( vehicle:Option[Vehicle] = None ) : Vehicle = {
-
-    val rv:Vehicle =
-
-      if( vehicle.nonEmpty ) {
-
-          val rvVehicle = Try[Vehicle] {
-            val futureSave = saveVehicle( vehicle.get )
-            val rv = Await.result( futureSave , Duration( 10 , "sec" ) )
-            rv // rvVehicle = rv
-          }
-
-        val opResult:Vehicle = rvVehicle match {
-          case Success( v ) => println( "Vehicle saved OK!" ); v
-          case Failure( e ) => println( "Vehicle save failed!: " , e.getMessage ); new Vehicle
-        }
-
-        opResult // rv = opResult
-
-      } else {
-
-        println( "Empty parameter!..." )
-        new Vehicle
-
-      }
-
-    rv //
-
-  }
-
+  def save( vehicle:Option[Vehicle] = None ) : Vehicle = ???
 
   private def saveVehicle( vehicle:Vehicle ) : Future[Vehicle] = ???
 
   private def getById ( realm:String , id:Int , withLastState:Boolean ) : Future[VehicleOld] = {
 
     println( "in getVehiclesById..." )
-
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString )
-
     val url = s"$serviceHost/metadata/vehicle/getVehicleById?idVehicle=$id&realm=$realm&lastState=$withLastState"
-
     val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( method = HttpMethod.custom( "GET" ) , uri = url ) )
-
     future.flatMap {
       case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[VehicleOld]
     }
@@ -73,45 +40,27 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
   def getVehiclesById( realm:Option[String] = None, ids:Option[List[Int]] = None, withLastState:Option[Boolean] = None , fps:Option[FilterPaginateSort] = None ) : List[VehicleOld] = {
 
     println( "in getVehiclesById..." )
-
     val vehiclesList:List[VehicleOld] =
-
       if( realm.nonEmpty && ids.nonEmpty && withLastState.nonEmpty && fps.nonEmpty ) {
-
         val rvList = Try[List[VehicleOld]] {
-
           val listOfFutures = for ( id <- ids.get ) yield {
-
             val veh = getById( realm.get , id , withLastState.get )
             veh
-
           }
-
           val futureVehList = Future.sequence( listOfFutures )
-
           val rv = Await.result( futureVehList , Duration( 10 , "sec" ) )
-
           rv
-
         }
-
         val opResult:List[VehicleOld] = rvList match {
-
           case Success( vehs ) => println("Vehicles get OK!") ; vehs
           case Failure( err ) => println("Vehicles get failed!: ", err.getMessage); List( new VehicleOld )
-
         }
-
         println( opResult )
         opResult // rv = opResult
-
       } else {
-
         println( "Empty parameter in request ..." )
         List( new VehicleOld )
-
       }
-
     vehiclesList
 
   }
@@ -126,9 +75,7 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
     println( s"url ... $url" )
     println( s"headers ... $hds" )
     println( s"body ... $body" )
-
     val future:Future[HttpResponse] = Http().singleRequest( HttpRequest( HttpMethods.POST , url , hds , body ) )
-
     future.flatMap {
       case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[VehicleOld]]
     }
@@ -159,6 +106,7 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
     }.map( list => list.map( v => newFromGetByUser( v ) ) )
       .map( list => list.map( v => getActivityStatus( v ) ) )
     rv
+
   }
 
   def vehOldToNew(vo:VehicleFromGetByCompany):Vehicle = {

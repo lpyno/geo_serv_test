@@ -61,9 +61,9 @@ class AuthApi(implicit val actor:ActorSystem, implicit val actorMaterializer: Ac
   def login =
     path("login") {
       get {
-        parameters( 'realm.as[Option[String]] , 'user.as[Option[String]] , 'password.as[Option[String]] , 'device.as[Option[String]] ) { ( realm , user , password , device ) =>
+        parameters( 'realm.as[Option[String]] , 'user.as[Option[String]] , 'password.as[Option[String]] , 'device.as[Option[String]] ) {
+          ( realm , user , password , device ) =>
           val startTs = System.currentTimeMillis()
-          println( s"running 'login()'... [$startTs]" )
           val futureUserInfo = auth.login( realm, user , password , device)
           onComplete( futureUserInfo ){
             case Success( userInfo ) => complete {
