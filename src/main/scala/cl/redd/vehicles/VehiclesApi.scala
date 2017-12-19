@@ -12,10 +12,9 @@ import cl.redd.objects.RequestResponses.GetVehiclesByUserId
 import cl.redd.objects._
 import io.swagger.annotations._
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-
 
 @Api(value = "/vehicles", produces = "application/json")
 @Path("/")
@@ -29,7 +28,8 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
   val route = save ~
               getById ~
               getByImei ~
-              getByUserId
+              getByUserId ~
+              getByCompanyId
 
   /** 4.1 "/save", POST method */
   @Api(value = "/vehicles/save", produces = "application/json")
@@ -53,7 +53,7 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
         put {
           entity(as[Vehicle]) {
             vehicle => complete {
-              vehicles.save(Some(vehicle))
+              "asdf"//vehicles.save(Some(vehicle))
             }
           }
         }
@@ -120,24 +120,16 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
       }
     }
 
-  /** 4.3 "/getByCompany", GET method */
+  /** 4.3 "/getByCompany", POST method */
   @Api(value = "/vehicles/getByCompanyId", produces = "application/json")
   @Path("/vehicles/getByCompanyId")
-  @ApiOperation(value = "Obtiene vehículos de una compañía", nickname = "getVehiclesByCompanyId", httpMethod = "GET", response = classOf[List[VehicleOld]])
+  @ApiOperation(value = "Obtiene vehículos de una compañía", nickname = "getVehiclesByCompanyId", httpMethod = "POST", response = classOf[List[VehicleFromGetAllByCompany]])
   @ApiImplicitParams(
     Array(
-      new ApiImplicitParam( name  = "realm",
-        value = "dominio a consultar",
-        dataTypeClass = classOf[String],
-        paramType = "query" ),
-      new ApiImplicitParam( name  = "companyId",
-        value = "id de compañia",
-        dataTypeClass = classOf[Int],
-        paramType = "query" ),
-      new ApiImplicitParam( name  = "withLastState",
-        value = "con información de último estado",
-        dataTypeClass = classOf[Boolean],
-        paramType = "query" )
+      new ApiImplicitParam( name  = "objeto request",
+        value = "información del request",
+        dataTypeClass = classOf[GetVehiclesByCompanyId],
+        paramType = "body" )
     )
   )
   @ApiResponses(Array(
@@ -146,7 +138,29 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
   def getByCompanyId =
     pathPrefix("vehicles") {
       path("getByCompanyId") {
-        complete ( ToResponseMarshallable( "getByCompany Unimplemented!" ) )
+        post{
+          entity(as[String]){
+            val startTs = System.currentTimeMillis()
+            request => val params = vehicles.parseGetByCompanyParams( request )
+            if ( params.isDefined ){
+              val vehicleList = vehicles.getByCompanyId( params.get.realm, params.get.companyId, params.get.withLastState, params.get.fps )
+              onComplete( vehicleList ) {
+                case Success( vehicleList ) => complete {
+                  println(s"Vehicles getByCompanyId() '${params.get.companyId}' completed!...")
+                  println(s"listSize:    [${vehicleList.size}]")
+                  println(s"elapsed:     [${System.currentTimeMillis() - startTs} ms]")
+                  ToResponseMarshallable( vehicleList )
+                }
+                case Failure( error ) => complete{
+                  println(s"Vehicles getByCompanyId failed... ${error.getMessage}")
+                  ToResponseMarshallable( error )
+                }
+              }
+            } else {
+              complete( ToResponseMarshallable("Vehicles request param undefined...") )
+            }
+          }
+        }
       }
     }
 
@@ -176,10 +190,11 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
                 val vehiclesList: Future[List[Vehicle]] = vehicles.getByUserId( params.get.realm, params.get.companyId, params.get.withLastState, params.get.fps )
                 onComplete(vehiclesList) {
                   case Success(vehiclesList) => complete {
-                    println(s"Vehicles getByUserId() completed!...")
-                    println(s"userProfile: [${params.get.fps.filterParams.get( "userProfile" ).get}]")
-                    println(s"listSize:    [${vehiclesList.size}]")
-                    println(s"elapsed:     [${System.currentTimeMillis() - startTs} ms]")
+                    println(s"Vehicles getByUserId() '${params.get.fps.filterParams.get( "userId" ).get}' completed!...")
+                    println(s"company ID...[${params.get.companyId}]")
+                    println(s"userProfile..[${params.get.fps.filterParams.get( "userProfile" ).get}]")
+                    println(s"listSize.....[${vehiclesList.size}]")
+                    println(s"elapsed......[${System.currentTimeMillis() - startTs} ms]")
                     ToResponseMarshallable( vehiclesList )
                   }
                   case Failure(err) => complete {

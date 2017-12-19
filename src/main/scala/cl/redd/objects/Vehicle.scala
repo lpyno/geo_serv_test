@@ -5,8 +5,6 @@ case class Vehicle (
                   id				      : Option[Int] = None,
                   name				    : Option[String] = None,
                   activityStatus  : Option[String] = None,   // ( "active","inactive","inactive24","moving" )
-                  //companyId			  : Option[Int] = None,
-                  //rutCompany		  : Option[String] = None,
                   vin	    	      : Option[String] = None,
                   plateNumber		  : Option[String] = None,
                   engineTypeId		: Option[Int] = None,

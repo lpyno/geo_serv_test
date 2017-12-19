@@ -59,9 +59,7 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   // SelectProfile
   implicit val selectProfileFormat = jsonFormat2( SelectProfiles )
 
-  implicit val vehicleFirstBLockFormat = jsonFormat21( VehicleFirstBlock )
   implicit val lastStateFormat = jsonFormat12( LastState )
-  implicit val vehicleLastBlockFormat  = jsonFormat3( VehicleLastBlock )
   implicit val vehicleFormat = jsonFormat21( Vehicle )
   implicit val lastStateOldFormat = jsonFormat15( LastStateOld )
   implicit val vehicleOldFormat = jsonFormat19( VehicleOld )
@@ -85,5 +83,6 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   /** vehicles */
   implicit val vehicleFromGetByUserFormat = jsonFormat22( VehicleFromGetByUser )
   implicit val vehicleFromGetByUserAdminFormat = jsonFormat22( VehicleFromGetByUserAdmin )
+  implicit val vehicleFromGetAllByCompany = jsonFormat22( VehicleFromGetAllByCompany )
 
 }

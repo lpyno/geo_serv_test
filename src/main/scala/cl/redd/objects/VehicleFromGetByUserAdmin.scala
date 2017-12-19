@@ -8,7 +8,6 @@ case class VehicleFromGetByUserAdmin (
   vehicleId   : Option[Int] = None,
   vin         : Option[String] = None,
   plateNumber : Option[String] = None,
-  //plate_number: Option[String] = None,
   name        : Option[String] = None,
   engineTypeId    : Option[Int] = None,
   subVehicleTypeId: Option[Int] = None,

@@ -13,9 +13,7 @@ import cl.redd.objects._
 import cl.tastets.life.objects.ServicesEnum
 import spray.json._
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ExecutionContext, Future}
 
 class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorMaterializer, implicit val ec:ExecutionContext ) {
 
@@ -37,33 +35,7 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
 
   }
 
-  def getVehiclesById( realm:Option[String] = None, ids:Option[List[Int]] = None, withLastState:Option[Boolean] = None , fps:Option[FilterPaginateSort] = None ) : List[VehicleOld] = {
-
-    println( "in getVehiclesById..." )
-    val vehiclesList:List[VehicleOld] =
-      if( realm.nonEmpty && ids.nonEmpty && withLastState.nonEmpty && fps.nonEmpty ) {
-        val rvList = Try[List[VehicleOld]] {
-          val listOfFutures = for ( id <- ids.get ) yield {
-            val veh = getById( realm.get , id , withLastState.get )
-            veh
-          }
-          val futureVehList = Future.sequence( listOfFutures )
-          val rv = Await.result( futureVehList , Duration( 10 , "sec" ) )
-          rv
-        }
-        val opResult:List[VehicleOld] = rvList match {
-          case Success( vehs ) => println("Vehicles get OK!") ; vehs
-          case Failure( err ) => println("Vehicles get failed!: ", err.getMessage); List( new VehicleOld )
-        }
-        println( opResult )
-        opResult // rv = opResult
-      } else {
-        println( "Empty parameter in request ..." )
-        List( new VehicleOld )
-      }
-    vehiclesList
-
-  }
+  def getVehiclesById( realm:Option[String] = None, ids:Option[List[Int]] = None, withLastState:Option[Boolean] = None , fps:Option[FilterPaginateSort] = None ) : List[VehicleOld] = ???
 
   def getVehiclesByImei( params:Option[GetListByMids]=None ):Future[List[VehicleOld]] = {
 
@@ -102,11 +74,35 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
           // change status field from boolean to int to match the admin vehicle format
           Unmarshal(entity).to[List[VehicleFromGetByUser]].map( list => list.map( v => statusToAdminFormat( v )))
         }
-      }
-    }.map( list => list.map( v => newFromGetByUser( v ) ) )
-      .map( list => list.map( v => getActivityStatus( v ) ) )
+      }.map( list => list.map( v => newFromGetByUser( v ) ) )
+        .map( list => list.map( v => getActivityStatus( v ) ) )
+    }
     rv
 
+  }
+
+  def getByCompanyId( realm:String, companyId:Int, withLastState:Boolean, fps:FilterPaginateSort ): Future[List[Vehicle]] = {
+    val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString() )
+    val url = s"$serviceHost/metadata/vehicle/getAllByCompany?realm=$realm&companyId=$companyId&lastState=$withLastState&revertUnsuscribe=false"
+    val hds = List(RawHeader("Accept", "application/json"))
+    // filter params supported: "id" & "ignoredIds" (as list []), "companyId", "name", "plateNumber", "vin", "validate", "fleetId", "imei"
+    val listFilters = fps.filterParams
+      .map( tuple => s"""{"${tuple._1}":"${tuple._2}"}""" )
+      .toString
+      .replace("List(","")
+      .replace(")","")
+      .replace(" ","")
+    // sort params supported: name, lastActivityDate
+    val strBody = s"""{"filter":{"filter":[$listFilters],"sort":"${fps.sortParam}"},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
+      .stripMargin
+    val body = HttpEntity( MediaTypes.`application/json`, strBody )
+
+    val futHttpResp = Http().singleRequest( HttpRequest( HttpMethods.POST, url, hds, body ) )
+    val rv = futHttpResp.flatMap{
+      case HttpResponse( StatusCodes.OK , _ , entity , _ ) => Unmarshal(entity).to[List[VehicleFromGetAllByCompany]]
+    }.map( list => list.map( v => newFromGetAllByCompany( v )))
+      .map( list => list.map( v => getActivityStatus( v )))
+    rv
   }
 
   def vehOldToNew(vo:VehicleFromGetByCompany):Vehicle = {
@@ -133,7 +129,7 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
       vehicleTypeName    = None,
       realm           = if( vo.realm.isDefined ) vo.realm else None,
       extraFields     = if( vo.extraFields.isDefined ) vo.extraFields else None,
-      lastState       = if( vo.lastState.isDefined ) lastStateNew( vo.lastState.get ) else Some( new LastState )
+      lastState       = if( vo.lastState.isDefined ) lastStateNew( vo.lastState.get ) else Some( LastState() )
     )
   }
 
@@ -176,8 +172,6 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
       id                = if( vo.vehicleId.isDefined ) vo.vehicleId else None,
       name              = if( vo.name.isDefined ) vo.name else None,
       activityStatus    = None, // filled later
-      //companyId         = if( vo.idCompany.isDefined ) vo.idCompany else None,
-      //rutCompany        = if( vo.rut_Company.isDefined ) vo.rut_Company else None,
       vin               = if( vo.vin.isDefined ) vo.vin else None,
       plateNumber       = if( vo.plateNumber.isDefined ) vo.plateNumber else None,
       engineTypeId      = if( vo.engineTypeId.isDefined ) vo.engineTypeId else None,
@@ -195,11 +189,66 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
       realm           = if( vo.realm.isDefined ) vo.realm else None,
       total           = if ( vo.total.isDefined ) vo.total else None,
       extraFields     = if( vo.extraFields.isDefined ) vo.extraFields else None,
-      lastState       = if( vo.lastState.isDefined ) lastStateNew( vo.lastState.get ) else Some( new LastState )
+      lastState       = if( vo.lastState.isDefined ) lastStateNew( vo.lastState.get ) else Some( LastState() )
     )
 
   }
 
+  def newFromGetAllByCompany( vo:VehicleFromGetAllByCompany ): Vehicle = {
+
+    Vehicle (
+      id                = if( vo.id.isDefined ) vo.id else None,
+      name              = if( vo.name.isDefined ) vo.name else None,
+      activityStatus    = None, // filled later
+      vin               = if( vo.vin.isDefined ) vo.vin else None,
+      plateNumber       = if( vo.plateNumber.isDefined ) vo.plateNumber else None,
+      engineTypeId      = if( vo.engineTypeId.isDefined ) vo.engineTypeId else None,
+      subVehicleTypeId  = if( vo.subVehicleTypeId.isDefined ) vo.subVehicleTypeId else None,
+      createDate        = if( vo.createDate.isDefined ) vo.createDate else None,
+      validateDate      = if( vo.validateDate.isDefined ) vo.validateDate else None,
+      dischargeDate     = if( vo.dischargeDate.isDefined ) vo.dischargeDate else None,
+      imei              = if( vo._m.isDefined ) vo._m else None,
+      deviceTypeId      = if( vo.deviceTypeId.isDefined ) vo.deviceTypeId else None,
+      simCard           = if( vo.simCardPhone.isDefined ) vo.simCardPhone else None,
+      engineTypeName    = if( vo.engineTypeName.isDefined ) vo.engineTypeName else None,
+      deviceTypeName    = if( vo.deviceTypeName.isDefined ) vo.deviceTypeName else None,
+      subVehicleTypeName = if( vo.subVehicleTypeName.isDefined ) vo.subVehicleTypeName else None,
+      vehicleTypeName    = if( vo.vehicleTypeName.isDefined ) vo.vehicleTypeName else None,
+      realm           = if( vo.realm.isDefined ) vo.realm else None,
+      total           = if ( vo.total.isDefined ) vo.total else None,
+      extraFields     = if( vo.extraFields.isDefined ) vo.extraFields else None,
+      lastState       = if( vo.lastState.isDefined ) lastStateNew( vo.lastState.get ) else Some( LastState() )
+    )
+
+  }
+
+/*  def newFromGetAllByCompany( vo:VehicleFromGetAllByCompany ): Vehicle = {
+
+    Vehicle (
+      id                = if( vo.id.isDefined ){ println(s"id: ${vo.id.get}"); vo.id } else None,
+      name              = if( vo.name.isDefined ){ println(s"name: ${vo.name.get}");vo.name } else None,
+      activityStatus    = None, // filled later
+      vin               = if( vo.vin.isDefined ){ println(s"vin: ${vo.vin.get}");vo.vin } else None,
+      plateNumber       = if( vo.plateNumber.isDefined ){ println(s"plateNumber: ${vo.plateNumber.get}");vo.plateNumber } else None,
+      engineTypeId      = if( vo.engineTypeId.isDefined ){ println(s"engineTypeId: ${vo.engineTypeId.get}");vo.engineTypeId } else None,
+      subVehicleTypeId  = if( vo.subVehicleTypeId.isDefined ){ println(s"subVehicleTypeId: ${vo.subVehicleTypeId.get}");vo.subVehicleTypeId } else None,
+      createDate        = if( vo.createDate.isDefined ) { println(s"createDate: ${vo.createDate.get}");vo.createDate } else None,
+      validateDate      = if( vo.validateDate.isDefined ) { println(s"validateDate: ${vo.validateDate.get}");vo.validateDate } else None,
+      dischargeDate     = if( vo.dischargeDate.isDefined ) { println(s"dischargeDate: ${vo.dischargeDate.get}");vo.dischargeDate } else None,
+      imei              = if( vo._m.isDefined ) { println(s"_m : ${vo._m.get}");vo._m } else None,
+      deviceTypeId      = if( vo.deviceTypeId.isDefined ) { println(s"deviceTypeId : ${vo.deviceTypeId.get}");vo.deviceTypeId } else None,
+      simCard           = if( vo.simCardPhone.isDefined ) { println(s"simCardPhone : ${vo.simCardPhone.get}");vo.simCardPhone } else None,
+      engineTypeName    = if( vo.engineTypeName.isDefined ) { println(s"engineTypeName : ${vo.engineTypeName.get}");vo.engineTypeName } else None,
+      deviceTypeName    = if( vo.deviceTypeName.isDefined ) { println(s"deviceTypeName : ${vo.deviceTypeName.get}");vo.deviceTypeName } else None,
+      subVehicleTypeName = if( vo.subVehicleTypeName.isDefined ) { println(s"subVehicleTypeName : ${vo.subVehicleTypeName.get}");vo.subVehicleTypeName } else None,
+      vehicleTypeName    = if( vo.vehicleTypeName.isDefined ) { println(s"vehicleTypeName : ${vo.vehicleTypeName.get}");vo.vehicleTypeName } else None,
+      realm           = if( vo.realm.isDefined ) { println(s"realm : ${vo.realm.get}");vo.realm } else None,
+      total           = if ( vo.total.isDefined ) { println(s"total : ${vo.total.get}");vo.total } else None,
+      extraFields     = if( vo.extraFields.isDefined ) { println(s"extraFields : ${vo.extraFields.get}");vo.extraFields } else None,
+      lastState       = if( vo.lastState.isDefined ) lastStateNew( vo.lastState.get ) else Some( LastState() )
+    )
+
+  }*/
 
   def lastStateNew( lastState:LastStateOld ):Option[LastState] = {
 
@@ -214,7 +263,7 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
       azimuth   = if(lastState.azimuth.isDefined) lastState.azimuth else None,
       speed     = if(lastState.speed.isDefined) lastState.speed else None,
       geotext   = if(lastState.geotext.isDefined) lastState.geotext else None
-    )
+      )
     )
 
   }
@@ -283,4 +332,46 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
     } else { return None }
   }
 
+  def parseGetByCompanyParams( request: String ): Option[GetVehiclesByCompanyId] = {
+
+    val jsObject = request
+      .parseJson
+      .asJsObject("Invalid Json")
+
+    val realm = if (jsObject.fields.get("realm").isDefined) {
+      jsObject.fields.get("realm").get.convertTo[String]
+    } else {
+      return None
+    }
+    val companyId = if (jsObject.fields.get("companyId").isDefined) {
+      jsObject.fields.get("companyId").get.convertTo[Int]
+    } else {
+      return None
+    }
+    val withLastState = if (jsObject.fields.get("withLastState").isDefined) {
+      jsObject.fields.get("withLastState").get.convertTo[Boolean]
+    } else {
+      return None
+    }
+    val fps = if (jsObject.fields.get("fps").isDefined) {
+      jsObject.fields.get("fps").get.convertTo[Map[String, JsValue]]
+    } else {
+      return None
+    }
+    val filterParams = if (fps.get("filterParams").isDefined) {
+      fps.get("filterParams").get.convertTo[Map[String, String]]
+    } else {
+      return None
+    }
+    Some(
+      GetVehiclesByCompanyId(realm, companyId, withLastState, FilterPaginateSort(
+        filterParams,
+        fps.get("pagLimit").get.convertTo[Int],
+        fps.get("pagOffset").get.convertTo[Int],
+        fps.get("sortOrder").get.convertTo[Int],
+        fps.get("sortParam").get.convertTo[String]
+      )
+      )
+    )
+  }
 }

@@ -56,10 +56,13 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
       path("save") {
         post {
           entity(as[Geofence]) {
+            val startTs = System.currentTimeMillis()
             request => val resp = geofences.save( request )
             onComplete( resp ) {
               case Success( resp ) => complete {
-                println( "Saved OK!..." )
+                println(s"Geofences save() completed!...")
+                println(s"id     :     [${resp.id}]")
+                println(s"elapsed:     [${System.currentTimeMillis() - startTs} ms]")
                 ToResponseMarshallable( resp )
               }
               case Failure( err ) => complete {
