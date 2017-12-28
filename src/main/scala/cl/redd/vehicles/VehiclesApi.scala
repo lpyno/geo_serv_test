@@ -259,8 +259,6 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
     }
   }
 
-
-
   def websocketRoute =
     pathPrefix("vehicles"){
       path("ws") {

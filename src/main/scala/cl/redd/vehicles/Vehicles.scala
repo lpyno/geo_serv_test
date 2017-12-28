@@ -54,14 +54,24 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
 
   }
 
-  def getByUserId( realm:String , companyId:Int , withLastState:Boolean , fps:FilterPaginateSort ) : Future[List[Vehicle]] = {
+  def  getByUserId( realm:String , companyId:Int , withLastState:Boolean , fps:FilterPaginateSort ) : Future[List[Vehicle]] = {
 
     val serviceHost = ReddDiscoveryClient.getNextIpByName( ServicesEnum.METADATAVEHICLE.toString() )
     val url = s"$serviceHost/metadata/vehicle/getVehiclesByUser?realm=$realm&companyId=$companyId&lastState=$withLastState"
     val hds = List(RawHeader("Accept", "application/json"))
+    val userProfile = fps.filterParams.get("userProfile").get
+    val userId = fps.filterParams.get("userId").get
     val isAdmin = fps.filterParams.get("userProfile").get.equalsIgnoreCase( "ADMIN" )
+
+    val listFilters = fps.filterParams
+      .map( tuple => s"""{"${tuple._1}":"${tuple._2}"}""" )
+      .toString
+      .replace("List(","")
+      .replace(")","")
+      .replace(" ","")
+
     val strBody =
-      s"""{"filter":{"userProfile":"${fps.filterParams.get("userProfile").get}","userId":${fps.filterParams.get("userId").get}},"sort":{"field":"${fps.sortParam}", "order":${fps.sortOrder}},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
+      s"""{"filter":{"userProfile":"$userProfile","userId":$userId,"filter":[$listFilters]},"sort":{"field":"${fps.sortParam}", "order":${fps.sortOrder}},"paginated":{"limit":${fps.pagLimit},"offset":${fps.pagOffset}}}"""
         .stripMargin
     val body = HttpEntity( MediaTypes.`application/json`, strBody )
     val futHttpResp = Http().singleRequest( HttpRequest( HttpMethods.POST, url, hds, body ) )
