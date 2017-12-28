@@ -7,11 +7,11 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.ActorMaterializer
 import cl.redd.discovery.ReddDiscoveryClient
-import cl.redd.objects.ReddJsonProtocol._
 import cl.redd.objects.RequestResponses.GetVehiclesByUserId
 import cl.redd.objects._
 import cl.tastets.life.objects.ServicesEnum
 import spray.json._
+import cl.redd.objects.ReddJsonProtocol._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -103,6 +103,22 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
     }.map( list => list.map( v => newFromGetAllByCompany( v )))
       .map( list => list.map( v => getActivityStatus( v )))
     rv
+  }
+
+  def update( vehicleToUpdate: VehicleToUpdate ):Future[VehicleToUpdate] = {
+
+    implicit val fmt = jsonFormat13(VehicleToUpdate)
+    val serviceHost = ReddDiscoveryClient.getNextIpByName(ServicesEnum.METADATAVEHICLE.toString())
+
+    val url = s"$serviceHost/metadata/vehicle/update"
+    val hds = List(RawHeader("Accept", "application/json"))
+    val body = HttpEntity(MediaTypes.`application/json`, vehicleToUpdate.toJson.toString)
+    println( s"update body: $body" )
+    val futHttpResp = Http().singleRequest(HttpRequest(HttpMethods.PUT, url, hds, body))
+
+    futHttpResp.flatMap {
+      case HttpResponse(StatusCodes.OK, _, entity, _) => Unmarshal(entity).to[VehicleToUpdate]
+    }
   }
 
   def vehOldToNew(vo:VehicleFromGetByCompany):Vehicle = {
@@ -374,4 +390,82 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
       )
     )
   }
+
+  def validateUpdateParams( request : String ):Option[VehicleToUpdate] = {
+
+    val jsObject = request
+      .parseJson
+      .asJsObject("Invalid Json")
+
+    val id = if (jsObject.fields.get("id").isDefined) {
+      jsObject.fields.get("id").get.convertTo[Int]
+    } else {
+      return None
+    }
+    val name = if (jsObject.fields.get("name").isDefined) {
+      jsObject.fields.get("name").get.convertTo[String]
+    } else {
+      return None
+    }
+    val plateNumber= if (jsObject.fields.get("plateNumber").isDefined) {
+      jsObject.fields.get("plateNumber").get.convertTo[String]
+    } else {
+      return None
+    }
+    val vin = if (jsObject.fields.get("vin").isDefined) {
+      jsObject.fields.get("vin").get.convertTo[String]
+    } else {
+      return None
+    }
+    val subVehicleType = if (jsObject.fields.get("subVehicleType").isDefined) {
+      jsObject.fields.get("subVehicleType").get.convertTo[Int]
+    } else {
+      return None
+    }
+    val engineType = if (jsObject.fields.get("engineType").isDefined) {
+      jsObject.fields.get("engineType").get.convertTo[Int]
+    } else {
+      return None
+    }
+    val companyId = if (jsObject.fields.get("companyId").isDefined) {
+      jsObject.fields.get("companyId").get.convertTo[Int]
+    } else {
+      return None
+    }
+    val extraFields = if (jsObject.fields.get("extraFields").isDefined) {
+      jsObject.fields.get("extraFields").get.convertTo[String]
+    } else {
+      return None
+    }
+    val validate = if (jsObject.fields.get("validate").isDefined) {
+      jsObject.fields.get("validate").get.convertTo[Int]
+    } else {
+      return None
+    }
+    val validateDate = if (jsObject.fields.get("validateDate").isDefined) {
+      jsObject.fields.get("validateDate").get.convertTo[Long]
+    } else {
+      return None
+    }
+    val downDate:Option[Long] = if (jsObject.fields.get("downDate").isDefined) {
+      jsObject.fields.get("downDate").get.convertTo[Option[Long]]
+    } else {
+      None
+    }
+    val requestBy = if (jsObject.fields.get("requestBy").isDefined) {
+      jsObject.fields.get("requestBy").get.convertTo[Option[String]]
+    } else {
+      None
+    }
+    val realm = if (jsObject.fields.get("realm").isDefined) {
+      jsObject.fields.get("realm").get.convertTo[String]
+    } else {
+      return None
+    }
+    Some( VehicleToUpdate(
+      id, name, plateNumber, vin, subVehicleType, engineType, companyId, extraFields, validate, validateDate,
+      downDate, requestBy, realm
+    ) )
+  }
+
 }

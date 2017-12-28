@@ -2,10 +2,13 @@ package cl.redd.vehicles
 
 import javax.ws.rs.Path
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
 import cl.redd.objects.ReddJsonProtocol._
 import cl.redd.objects.RequestResponses.GetVehiclesByUserId
@@ -25,12 +28,14 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
 
   val vehicles:Vehicles = new Vehicles()
 
-  val route = save ~
-              getById ~
+  val route = getById ~
               getByImei ~
               getByUserId ~
-              getByCompanyId
+              getByCompanyId ~
+              update ~
+              websocketRoute
 
+/*
   /** 4.1 "/save", POST method */
   @Api(value = "/vehicles/save", produces = "application/json")
   @Path("/vehicles/save")
@@ -59,6 +64,7 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
         }
       }
     }
+*/
 
   /** 4.2 "/getById", GET method */
   @Api(value = "/vehicles/getById", produces = "application/json")
@@ -209,6 +215,85 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
         }
       }
     }
+  /** 4.7 "/update", PUT method */
+  @Api(value = "/vehicles/update", produces = "application/json")
+  @Path("/vehicles/update")
+  @ApiOperation(value = "Actualiza vehículo", nickname = "updateVehicle", httpMethod = "PUT", response = classOf[VehicleToUpdate])
+  @ApiImplicitParams(
+    Array(
+      new ApiImplicitParam( name  = "objeto para actualización",
+        value = "información parámetros a actualizar",
+        dataTypeClass = classOf[VehicleToUpdate],
+        paramType = "body" )
+    )
+  )
+  @ApiResponses(Array(
+    new ApiResponse(code = 500, message = "Internal server error")
+  ))
+  def update = pathPrefix( "vehicles" ){
+    path( "update" ){
+      put{
+        entity(as[String]) {
+          implicit val fmt = jsonFormat13(VehicleToUpdate)
+          val startTs = System.currentTimeMillis()
+          request =>
+          val vehicleToUpdate = vehicles.validateUpdateParams( request )
+          if ( vehicleToUpdate.isDefined ){
+            val rv = vehicles.update( vehicleToUpdate.get )
+            onComplete( rv ) {
+              case Success( v ) => complete {
+                println(s"Vehicles update completed!...")
+                println(s"elapsed: [${System.currentTimeMillis() - startTs} ms]")
+                ToResponseMarshallable( v )
+              }
+              case Failure( e ) => complete {
+                println( s"Vehicles update failed!...${e.getMessage}" )
+                ToResponseMarshallable( e.getMessage )
+              }
+            }
+          } else {
+            complete( ToResponseMarshallable("RequestParam Undefined...") )
+          }
+        }
+      }
+    }
+  }
+
+
+
+  def websocketRoute =
+    pathPrefix("vehicles"){
+      path("ws") {
+        handleWebSocketMessages(wsHandler)
+      }
+    }
+  // websocket test
+
+  def wsHandler: Flow[Message, Message, Any] =
+    Flow[Message].map {
+      case tm : TextMessage => {
+        TextMessage( Source.single("rs echo input:") ++ tm.textStream )
+      }
+      case bm : BinaryMessage =>
+        TextMessage( "Message unsupported" )
+    }
+
+  def getVehicles( realm:String, companyId:Int, ids:List[Int] ): Future[List[Vehicle]] = {
+
+    // {"filter":{"userProfile":"ADMIN","userId":925,"filter":[{"id":[1,2,3]}]},"sort":{"field":"name", "order":1},"paginated":{"limit":10,"offset":0}}
+    val filterParams = Map( "id" -> ids.toString.replace("List(","").replace(")","").replace(" ","") )
+    println( s"filterParams: $filterParams" )
+    val fps:FilterPaginateSort = FilterPaginateSort( filterParams, 0, 0, 0, "name" )
+    //val vehicleList = vehicles.getByCompanyId( realm, companyId, true, fps )
+    val vehicleList = vehicles.getByCompanyId( realm, companyId, true, fps )
+    vehicleList
+    //Future( s"Ids to stream: $ids" )
+  }
+
+  def parseMessage: Flow[Message,StreamRequest,NotUsed] = ???
+
+
+
 }
 
 

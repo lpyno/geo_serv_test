@@ -307,16 +307,20 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
           println( s"route found..." )
           parameters ( "id".as[Option[Long]] ) {
             println( s"in delete..." )
-            id => val rv = geofences.delete( id.get )
-            onComplete( rv ) {
-              case Success( rv  ) => complete{
-                println( s"Delete OK! id: ${rv}" )
-                ToResponseMarshallable( rv )
+            id => if( id.nonEmpty ){
+              val rv = geofences.delete( id.get )
+              onComplete( rv ) {
+                case Success( rv  ) => complete{
+                  println( s"Delete OK! id: ${rv}" )
+                  ToResponseMarshallable( rv )
+                }
+                case Failure( err ) => complete{
+                  println( s"Delete Failed... ${err.getMessage}" )
+                  ToResponseMarshallable( err )
+                }
               }
-              case Failure( err ) => complete{
-                println( s"Delete Failed... ${err.getMessage}" )
-                ToResponseMarshallable( err )
-              }
+            } else {
+              complete( ToResponseMarshallable("Geofence id undefined!...") )
             }
           }
         }

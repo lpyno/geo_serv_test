@@ -197,9 +197,9 @@ class Fleets( implicit val system : ActorSystem,
       list.map( fleet => fleetOldToNew( fleet ) )
     } ).map( l => l.filter(
         f => f.realm.isDefined
-        && f.id.isDefined
-        && f.companyId.isDefined
-        && ( f.defaultFleet.isEmpty || f.defaultFleet.get != 1 )
+          && f.id.isDefined
+          && f.companyId.isDefined
+          && ( f.defaultFleet.isEmpty || f.defaultFleet.get != 1 )
       )
     )
 
