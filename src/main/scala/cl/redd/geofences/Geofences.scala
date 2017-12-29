@@ -94,22 +94,21 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
     val realm = if (realmJs.isDefined){
       realmJs.get.convertTo[String]
     } else { return None }
-    //println( s"realm: $realm " )
+
     val companyIdJs = jsObject.fields.get("companyId")
     val companyId = if (companyIdJs.isDefined){
       companyIdJs.get.convertTo[Int]
     } else { return None }
-    //println( s"companyId: $companyId" )
+
     val fpsJs = jsObject.fields.get("fps")
     val fps = if (fpsJs.isDefined){
       fpsJs.get.convertTo[Map[String,JsValue]]
     } else { return None }
-    //println( s"fps: $fps" )
+
     val filterParamsJs = fps.get("filterParams")
     val filterParams = if (filterParamsJs.isDefined){
       filterParamsJs.get.convertTo[Map[String,String]]
     } else { return None }
-    //println( s"filterFields: $filterParams" )
 
     Some(
       GetByCompanyReq( realm, companyId, FilterPaginateSort(
@@ -121,6 +120,57 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
         )
       )
     )
+  }
+
+  def parseGeofenceToUpdate( request:String ): Option[GeofenceToUpdate] = {
+
+    val jsObjectMap = request
+      .parseJson
+      .asJsObject( "Invalid Json")
+      .fields
+
+    val name = if ( jsObjectMap.get("name").isDefined ){
+      jsObjectMap.get("name").get.convertTo[String]
+    } else { return None }
+
+    val userId = if ( jsObjectMap.get("userId").isDefined ){
+      jsObjectMap.get("userId").get.convertTo[Int]
+    } else { return None }
+
+    val theGeom = if ( jsObjectMap.get("theGeom").isDefined ){
+      jsObjectMap.get("theGeom").get.convertTo[String]
+    } else { return None }
+
+    val bboxGeom = if ( jsObjectMap.get("bboxGeom").isDefined ){
+      jsObjectMap.get("bboxGeom").get.convertTo[String]
+    } else { return None }
+
+    val buffer = if ( jsObjectMap.get("buffer").isDefined ){
+      jsObjectMap.get("buffer").get.convertTo[Int]
+    } else { return None }
+
+    val colour = if ( jsObjectMap.get("colour").isDefined ){
+      jsObjectMap.get("colour").get.convertTo[String]
+    } else { return None }
+
+    val maxSpeed = if ( jsObjectMap.get("maxSpeed").isDefined ){
+      jsObjectMap.get("maxSpeed").get.convertTo[Int]
+    } else { return None }
+
+    val alarm = if ( jsObjectMap.get("alarm").isDefined ){
+      jsObjectMap.get("alarm").get.convertTo[Boolean]
+    } else { return None }
+
+    val extraFields = if ( jsObjectMap.get("extraFields").isDefined ){
+      jsObjectMap.get("extraFields").get.convertTo[String]
+    } else { return None }
+
+    val id = if ( jsObjectMap.get("id").isDefined ){
+      jsObjectMap.get("id").get.convertTo[Int]
+    } else { return None }
+
+    Some( GeofenceToUpdate( name, userId, theGeom, bboxGeom, buffer, colour, maxSpeed, alarm, extraFields, id ) )
+
   }
 
   def queryOldGeofences( realm:Option[String], companyId:Option[Int], fps:Option[FilterPaginateSort] ) : Future[HttpResponse] = {
@@ -205,7 +255,21 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
 
   /** 3.6 "/update", PUT method */
 
-  def update( realm:String , updatedGeofence:Geofence ) : Geofence = ???
+  def update( geofence:GeofenceToUpdate ) : Future[GeofenceToUpdate] = {
+
+    implicit val fmt = jsonFormat10( GeofenceToUpdate )
+    val serviceHost = ReddDiscoveryClient.getNextIpByName(ServicesEnum.GEOFENCE.toString())
+    val url = s"$serviceHost/geofence/update"
+    val hds = List(RawHeader("Accept", "application/json"))
+    val body = HttpEntity(MediaTypes.`application/json`, geofence.toJson.toString)
+    val futHttpResp = Http().singleRequest(HttpRequest(HttpMethods.PUT, url, hds, body))
+
+    futHttpResp.flatMap {
+      case HttpResponse(StatusCodes.OK, _, entity, _) => Unmarshal(entity).to[GeofenceToUpdate]
+    }
+  }
+
+
 
   /** 3.7 "/delete", DELETE method */
 

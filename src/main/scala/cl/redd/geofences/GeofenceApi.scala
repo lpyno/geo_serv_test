@@ -256,22 +256,15 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
   }
 
   /** 3.6 "/update", PUT method */
-  //update( realm:String , updatedGeofence:Geofence ) = ???
-  @Api(value = "/update", produces = "application/json")
-  @Path("/update")
-  @ApiOperation(value = "Actualiza un objeto geocerca", nickname = "updateGeofence", httpMethod = "PUT", response = classOf[UpdateResp])
+  @Api(value = "/geofences/update", produces = "application/json")
+  @Path("/geofences/update")
+  @ApiOperation(value = "Actualiza un objeto geocerca", nickname = "updateGeofence", httpMethod = "PUT", response = classOf[GeofenceToUpdate])
   @ApiImplicitParams(
     Array(
-      new ApiImplicitParam( name  = "realm",
-                            value = "dominio donde se creará la nueva geocerca",
-                            required = true,
-                            dataTypeClass = classOf[String],
-                            paramType = "body" ),
-
       new ApiImplicitParam( name  = "geofence",
                             value = "nueva geocerca",
                             required = true,
-                            dataTypeClass = classOf[Geofence],
+                            dataTypeClass = classOf[GeofenceToUpdate],
                             paramType = "body" )
     )
   )
@@ -279,13 +272,34 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
     new ApiResponse(code = 500, message = "Internal server error")
   ))
   def update =
-  path("update") {
-    put {
-      entity(as[UpdateReq]) { request =>
-        complete { "update method" }
+    pathPrefix( "geofences" ){
+      path("update") {
+        put {
+          entity(as[String]) {
+            request =>
+              val startTs = System.currentTimeMillis()
+              val geofenceToUpdate = geofences.parseGeofenceToUpdate( request )
+              if ( geofenceToUpdate.isDefined ){
+                val eval = geofences.update( geofenceToUpdate.get )
+                onComplete( eval ){
+                  case Success( geofence ) => complete{
+                    println(s"Geofences update '${geofence.id}' completed!...")
+                    println(s"elapsed: [${System.currentTimeMillis() - startTs} ms]")
+                    implicit val fmt = jsonFormat10( GeofenceToUpdate )
+                    ToResponseMarshallable( geofence )
+                  }
+                  case Failure( error ) => complete{
+                    println(s"Geofences update '${geofenceToUpdate.get.id}' failed... ${error.getMessage}")
+                    ToResponseMarshallable( error )
+                  }
+                }
+              } else{
+                complete( ToResponseMarshallable("Geofence request param undefined...") )
+              }
+          }
+        }
       }
     }
-  }
 
   /** 3.7 "/delete", DELETE method */
   //delete( realm:String , geofenceId:Int ) : Geofence = ???
@@ -304,9 +318,7 @@ class GeofenceApi( implicit val system:ActorSystem, implicit val materializer:Ac
     pathPrefix( "geofences" ) {
       path("delete") {
         akka.http.scaladsl.server.Directives.delete {
-          println( s"route found..." )
           parameters ( "id".as[Option[Long]] ) {
-            println( s"in delete..." )
             id => if( id.nonEmpty ){
               val rv = geofences.delete( id.get )
               onComplete( rv ) {

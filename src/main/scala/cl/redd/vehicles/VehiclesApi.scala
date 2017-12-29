@@ -129,7 +129,7 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
   /** 4.3 "/getByCompany", POST method */
   @Api(value = "/vehicles/getByCompanyId", produces = "application/json")
   @Path("/vehicles/getByCompanyId")
-  @ApiOperation(value = "Obtiene vehículos de una compañía", nickname = "getVehiclesByCompanyId", httpMethod = "POST", response = classOf[List[VehicleFromGetAllByCompany]])
+  @ApiOperation(value = "Obtiene vehículos asociados a un id de compañía", nickname = "getVehiclesByCompanyId", httpMethod = "POST", response = classOf[List[VehicleFromGetAllByCompany]])
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam( name  = "objeto request",
@@ -173,7 +173,7 @@ class VehiclesApi(implicit val actor:ActorSystem, implicit val actorMaterializer
   /** 4.4 "/getByUser", POST method */
   @Api(value = "/vehicles/getByUserId", produces = "application/json")
   @Path("/vehicles/getByUserId")
-  @ApiOperation(value = "Obtiene vehículos de una compañía", nickname = "getVehiclesByUserId", httpMethod = "POST", response = classOf[List[Vehicle]])
+  @ApiOperation(value = "Obtiene vehículos asociados a un id de usuario", nickname = "getVehiclesByUserId", httpMethod = "POST", response = classOf[List[Vehicle]])
   @ApiImplicitParams(
     Array(
       new ApiImplicitParam( name  = "objeto request",
