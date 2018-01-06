@@ -123,7 +123,6 @@ class Vehicles(implicit val actor:ActorSystem, implicit val materializer: ActorM
     val url = s"$serviceHost/metadata/vehicle/update"
     val hds = List(RawHeader("Accept", "application/json"))
     val body = HttpEntity(MediaTypes.`application/json`, vehicleToUpdate.toJson.toString)
-    println( s"update body: $body" )
     val futHttpResp = Http().singleRequest(HttpRequest(HttpMethods.PUT, url, hds, body))
 
     futHttpResp.flatMap {

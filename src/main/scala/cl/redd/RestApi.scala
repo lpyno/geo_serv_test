@@ -12,6 +12,10 @@ import cl.redd.discovery.ReddDiscoveryClient
 import cl.redd.fleets.FleetsApi
 import cl.redd.vehicles.VehiclesApi
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.http.scaladsl.model.HttpMethods
+import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
+
+import scala.collection.immutable
 
 object RestApi extends App with RouteConcatenation with SprayJsonSupport {
 
@@ -22,10 +26,16 @@ object RestApi extends App with RouteConcatenation with SprayJsonSupport {
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
 
+  val settings = CorsSettings.defaultSettings.copy( allowedMethods = immutable.Seq( HttpMethods.GET,
+                                                                                    HttpMethods.PUT,
+                                                                                    HttpMethods.POST,
+                                                                                    HttpMethods.DELETE,
+                                                                                    HttpMethods.OPTIONS ) )
+
   ReddDiscoveryClient.init()
 
   val routes =
-    cors() (
+    cors( settings ) (
       new GeofenceApi().route ~
       new AuthApi().route ~
       new VehiclesApi().route ~

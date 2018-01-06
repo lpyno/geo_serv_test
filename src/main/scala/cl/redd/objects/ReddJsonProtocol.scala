@@ -85,5 +85,10 @@ object ReddJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport{
   implicit val vehicleFromGetByUserAdminFormat = jsonFormat22( VehicleFromGetByUserAdmin )
   implicit val vehicleFromGetAllByCompany = jsonFormat22( VehicleFromGetAllByCompany )
   implicit val vehicleToUpdate = jsonFormat13( VehicleToUpdate )
+  /** fleets */
+  implicit val fmtVehicleUpdateFleet = jsonFormat1( VehicleFleetUpdate )
+  implicit val fmtCompanyUpdateFleet = jsonFormat1( CompanyFleetUpdate )
+  implicit val fmtUserUpdateFleet = jsonFormat2( UserFleetUpdate )
+  implicit val fmtFleetToUpdate = jsonFormat13( FleetToUpdate )
 
 }

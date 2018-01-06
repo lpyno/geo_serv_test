@@ -267,6 +267,7 @@ class Geofences (implicit val actor:ActorSystem, implicit val materializer: Acto
     futHttpResp.flatMap {
       case HttpResponse(StatusCodes.OK, _, entity, _) => Unmarshal(entity).to[GeofenceToUpdate]
     }
+
   }
 
 

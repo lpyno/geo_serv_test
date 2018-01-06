@@ -18,7 +18,6 @@ class Fleets( implicit val system : ActorSystem,
                         implicit val materializer : ActorMaterializer,
                         implicit val ec : ExecutionContext ){
 
-
   private def fleetOldToNew( fleetOld: FleetOld ) : Fleet = {
 
     val fleet =
@@ -216,4 +215,86 @@ class Fleets( implicit val system : ActorSystem,
       return fleetsWithActivity//.flatMap( list => Future { list.sortWith( ( _.name.get < _.name.get ) ) } )
     }
   }
+
+  def parseFleetToUpdate ( request:String ):Option[FleetToUpdate] = {
+
+    val jsObjectMap = request
+      .parseJson
+      .asJsObject( "Invalid Json")
+      .fields
+
+    val name = if ( jsObjectMap.get("name").isDefined ){
+      jsObjectMap.get("name").get.convertTo[String]
+    } else return None
+
+    val vehicles = if ( jsObjectMap.get("vehicles").isDefined ){
+      val vehiclesVector = jsObjectMap.get("vehicles").get.convertTo[Vector[VehicleFleetUpdate]]
+      Some( vehiclesVector )
+    } else None
+
+    val companies = if ( jsObjectMap.get("companies").isDefined ){
+      Some( jsObjectMap.get("companies").get.convertTo[Vector[CompanyFleetUpdate]] )
+    } else None
+
+    val users = if ( jsObjectMap.get("users").isDefined ){
+      Some( jsObjectMap.get("users").get.convertTo[Vector[UserFleetUpdate]] )
+    } else None
+
+    val generateReport = if ( jsObjectMap.get("generateReport").isDefined ){
+      jsObjectMap.get("generateReport").get.convertTo[Boolean]
+    } else return None
+
+    val maxSpeed = if ( jsObjectMap.get("maxSpeed").isDefined ){
+      jsObjectMap.get("maxSpeed").get.convertTo[Int]
+    } else return None
+
+    val startDay = if ( jsObjectMap.get("startDay").isDefined ){
+      jsObjectMap.get("startDay").get.convertTo[Int]
+    } else return None
+
+    val startHour = if ( jsObjectMap.get("startHour").isDefined ){
+      jsObjectMap.get("startHour").get.convertTo[String]
+    } else return None
+
+    val endDay = if ( jsObjectMap.get("endDay").isDefined ){
+      jsObjectMap.get("endDay").get.convertTo[Int]
+    } else return None
+
+    val endHour = if ( jsObjectMap.get("endHour").isDefined ){
+      jsObjectMap.get("endHour").get.convertTo[String]
+    } else return None
+
+    val inactiveDays = if ( jsObjectMap.get("inactiveDays").isDefined ){
+      jsObjectMap.get("inactiveDays").get.convertTo[Int]
+    } else return None
+
+    val id = if ( jsObjectMap.get("id").isDefined ){
+      jsObjectMap.get("id").get.convertTo[Int]
+    } else return None
+
+    val realm = if ( jsObjectMap.get("realm").isDefined ){
+      jsObjectMap.get("realm").get.convertTo[String]
+    } else return None
+
+    Some(
+      FleetToUpdate( name, vehicles, companies, users, generateReport, maxSpeed, startDay, startHour, endDay, endHour,
+        inactiveDays, id, realm )
+    )
+
+  }
+
+  def update( fleet:FleetToUpdate ): Future[FleetToUpdate] = {
+
+    val serviceHost = ReddDiscoveryClient.getNextIpByName(ServicesEnum.METADATAVEHICLE.toString())
+    val url = s"$serviceHost/metadata/vehicle/fleet/update"
+    val hds = List(RawHeader("Accept", "application/json"))
+    val body = HttpEntity(MediaTypes.`application/json`, fleet.toJson.toString)
+    val futHttpResp = Http().singleRequest(HttpRequest(HttpMethods.PUT, url, hds, body))
+
+    futHttpResp.flatMap {
+      case HttpResponse(StatusCodes.OK, _, entity, _) => Unmarshal(entity).to[FleetToUpdate]
+    }
+
+  }
+
 }
